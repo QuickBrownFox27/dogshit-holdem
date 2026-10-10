@@ -52,8 +52,15 @@ def read_games():
                 f.rename(photos / f"game{m.group(1)}.{m.group(2).lower()}")
     for g in games.values():
         for ext in ("webp", "jpg", "jpeg", "png"):
-            if (photos / f"game{g['num']}.{ext}").exists():
+            path = photos / f"game{g['num']}.{ext}"
+            if path.exists():
                 g["photo"] = f"photos/game{g['num']}.{ext}"
+                try:
+                    from PIL import Image
+                    with Image.open(path) as im:
+                        g["photoW"], g["photoH"] = im.size
+                except Exception:
+                    pass
                 break
     return list(games.values())
 
