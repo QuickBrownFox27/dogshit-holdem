@@ -304,7 +304,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
 
   <div class="grid-2">
     <section class="panel" aria-labelledby="raceH">
-      <div class="panel-h"><h2 id="raceH">Bankroll Race</h2><span class="hint">Running profit after each game. Hover for the standings, tap a name to follow one stack.</span></div>
+      <div class="panel-h"><h2 id="raceH">Bankroll Race</h2><span class="hint">Running profit after each game for ranked players (3+ games). Hover for the standings, tap a name to follow one stack.</span></div>
       <div class="chartbox" id="chart"></div>
       <div class="legend" id="legend"></div>
     </section>
@@ -588,7 +588,9 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   }
 
   function renderChart(games, colors) {
-    const players = [...new Set(games.flatMap(g => g.entries.map(e => e.p)))];
+    // Only players with a ledger place (3+ games in total) race
+    const players = [...new Set(games.flatMap(g => g.entries.map(e => e.p)))].filter(p => careerGames(p, games) >= MIN_RANKED_GAMES);
+    if (state.focus && !players.includes(state.focus)) state.focus = null;
     const N = games.length;
     const series = players.map(p => {
       let c = 0; const pts = [0];
