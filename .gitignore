@@ -1,0 +1,4 @@
+# Keep the raw spreadsheet private
+*.xlsx
+~$*
+__pycache__/
