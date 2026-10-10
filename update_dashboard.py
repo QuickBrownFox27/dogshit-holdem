@@ -43,10 +43,16 @@ def read_games():
             continue
         g = games.setdefault(num, {"num": num, "date": date.strftime("%Y-%m-%d"), "entries": []})
         g["entries"].append({"p": str(player).strip(), "buyin": buyin or 0, "won": won or 0, "place": place or 1})
-    # A photo for a game is picked up from photos/game<N>.<ext>
+    # A photo for a game is picked up from photos/game<N>.<ext> ("game 13.jpg" gets renamed to "game13.jpg")
+    photos = HERE / "photos"
+    if photos.is_dir():
+        for f in photos.iterdir():
+            m = re.fullmatch(r"game[ _-]+(\d+)\.(webp|jpe?g|png)", f.name, re.I)
+            if m:
+                f.rename(photos / f"game{m.group(1)}.{m.group(2).lower()}")
     for g in games.values():
         for ext in ("webp", "jpg", "jpeg", "png"):
-            if (HERE / "photos" / f"game{g['num']}.{ext}").exists():
+            if (photos / f"game{g['num']}.{ext}").exists():
                 g["photo"] = f"photos/game{g['num']}.{ext}"
                 break
     return list(games.values())
