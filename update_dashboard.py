@@ -43,6 +43,12 @@ def read_games():
             continue
         g = games.setdefault(num, {"num": num, "date": date.strftime("%Y-%m-%d"), "entries": []})
         g["entries"].append({"p": str(player).strip(), "buyin": buyin or 0, "won": won or 0, "place": place or 1})
+    # A photo for a game is picked up from photos/game<N>.<ext>
+    for g in games.values():
+        for ext in ("webp", "jpg", "jpeg", "png"):
+            if (HERE / "photos" / f"game{g['num']}.{ext}").exists():
+                g["photo"] = f"photos/game{g['num']}.{ext}"
+                break
     return list(games.values())
 
 
