@@ -46,6 +46,13 @@ def read_games():
             continue
         g = games.setdefault(num, {"num": num, "date": date.strftime("%Y-%m-%d"), "entries": []})
         g["entries"].append({"p": str(player).strip(), "buyin": buyin or 0, "won": won or 0, "place": place or 1})
+    # Who hosted each game, from the "Host" tab (column A game number, column B host)
+    wb = ws.parent
+    if "Host" in wb.sheetnames:
+        for row in wb["Host"].iter_rows(min_row=2, values_only=True):
+            num, host = (row + (None, None))[:2]
+            if num in games and host:
+                games[num]["host"] = str(host).strip()
     for num, fixed in DATE_FIXES.items():
         if num in games and games[num]["date"] != fixed:
             print(f"Note: game {num} is dated {games[num]['date']} in the spreadsheet; using {fixed}. Fix the sheet to match.")
