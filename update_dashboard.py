@@ -72,6 +72,31 @@ def read_games():
     return list(games.values())
 
 
+def read_player_photos(games):
+    """Match photos/players/<name>.<ext> to player names, ignoring case."""
+    folder = HERE / "photos" / "players"
+    names = {e["p"].lower(): e["p"] for g in games for e in g["entries"]}
+    found = {}
+    if not folder.is_dir():
+        return found
+    for f in sorted(folder.iterdir()):
+        if f.suffix.lower().lstrip(".") not in ("webp", "jpg", "jpeg", "png"):
+            continue
+        name = names.get(f.stem.strip().lower())
+        if not name:
+            print(f"Note: no player called '{f.stem}' for {f.name}")
+            continue
+        info = {"photo": f"photos/players/{f.name}"}
+        try:
+            from PIL import Image, ImageOps
+            with Image.open(f) as im:
+                info["w"], info["h"] = ImageOps.exif_transpose(im).size
+        except Exception:
+            pass
+        found[name] = info
+    return found
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--next", help="next game date, YYYY-MM-DD (use '' to clear)")
@@ -90,7 +115,8 @@ def main():
         settings["name"] = args.name
 
     games = read_games()
-    data = json.dumps({"settings": settings, "games": games}, separators=(",", ":"))
+    players = read_player_photos(games)
+    data = json.dumps({"settings": settings, "games": games, "players": players}, separators=(",", ":"))
     html = html[: m.start(1)] + data + html[m.end(1):]
     HTML.write_text(html, encoding="utf-8")
     SITE.write_text(SITE_HEAD + html + SITE_TAIL, encoding="utf-8")
