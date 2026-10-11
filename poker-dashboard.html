@@ -177,6 +177,8 @@ table.board { width: 100%; border-collapse: collapse; min-width: 760px; }
 .award { border: 1px solid var(--rule); border-radius: 10px; padding: 14px 14px 12px; display: grid; gap: 4px; align-content: start; background: var(--card-2); position: relative; }
 .award .suit { position: absolute; top: 10px; right: 12px; font-size: 18px; line-height: 1; }
 .award .suit.r { color: var(--loss); }
+.award.special { background: transparent; border-style: dashed; border-color: var(--gold); }
+.award.special .suit { color: var(--gold); }
 .award .aname { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); font-weight: 700; padding-right: 22px; }
 .award .who { font-family: var(--f-display); font-size: 22px; line-height: 1.15; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .award .stat { font-family: var(--f-mono); font-size: 13px; font-weight: 600; }
@@ -779,8 +781,32 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     add("♠", "Mr Consistent", a, a && `Avg finish ${a.who[0].avgPlace.toFixed(1)} over ${a.who[0].games} games, rarely strays from the top half`, "You always know what you're getting.");
     a = pickBest(stats, s => s.games); add("♣", "Iron Man", a, a && `${a.val} of ${games.length} games`, "Never misses a deal.");
     a = pickBest(stats, s => s.last3, 1, s => s.games >= 3); add("♥", "Hot Hand", a, a && `${money(a.val, true)} a game over their last 3`, "Form player. Watch your stack.");
+    // Special mentions: every ranked player (3+ games) without a trophy gets the first quirky one that fits them.
+    const honoured = new Set(A.flatMap(x => x.w.who.map(s => s.name)));
+    const all = allGames(), today = todayISO();
+    const ties = {};
+    games.forEach(g => g.entries.forEach(e => { if (g.entries.filter(o => o.place === e.place).length > 1) ties[e.p] = (ties[e.p] || 0) + 1; }));
+    const debut = n => all.find(g => g.entries.some(e => e.p === n));
+    const lastSeen = n => [...all].reverse().find(g => g.entries.some(e => e.p === n));
+    const QUIRKY = [
+      { t: "Beginner's Luck", ok: s => { const g = debut(s.name); return g.entries.find(e => e.p === s.name).place === 1; }, rank: s => s.games, stat: s => { const g = debut(s.name), e = g.entries.find(x => x.p === s.name); return `Won on debut: game ${g.num}, ${money(e.won)}`; }, quip: "Has been insufferable ever since." },
+      { t: "Never Lost a Dollar", ok: s => s.seq.every(x => x.net >= 0), rank: s => s.games, stat: s => `${plural(s.games, "game")}, never once went home down`, quip: "Undefeated. Technically." },
+      { t: "Crowd Puller", ok: () => true, rank: s => avg(s.seq.map(x => x.field)), stat: s => `Average table of ${avg(s.seq.map(x => x.field)).toFixed(1)} players`, quip: "Only turns up for the big nights." },
+      { t: "The Ghost", ok: s => dayDiff(lastSeen(s.name).date, today) > 365, rank: s => dayDiff(lastSeen(s.name).date, today), stat: s => { const g = lastSeen(s.name); return `Last seen game ${g.num}, ${dayDiff(g.date, today)} days ago`; }, quip: "Still officially on the books." },
+      { t: "The Bridesmaid", ok: s => s.places.filter(p => p === 2).length >= 2, rank: s => s.places.filter(p => p === 2).length, stat: s => `${s.places.filter(p => p === 2).length}× runner-up`, quip: "Always the bridesmaid." },
+      { t: "Chop Shop", ok: s => (ties[s.name] || 0) >= 1, rank: s => ties[s.name] || 0, stat: s => `Shared a finishing spot ${plural(ties[s.name], "time")}`, quip: "Hates to leave anyone out." },
+      { t: "Breakeven Artist", ok: s => s.seq.some(x => x.net === 0), rank: s => s.seq.filter(x => x.net === 0).length, stat: s => `${plural(s.seq.filter(x => x.net === 0).length, "night")} finishing exactly square`, quip: "Came, played, changed nothing." },
+      { t: "Fashionably Late", ok: () => true, rank: s => debut(s.name).num, stat: s => `Debuted in game ${debut(s.name).num}`, quip: "Better late than never." },
+    ];
+    QUIRKY.forEach(Q => {
+      const c = stats.filter(s => !honoured.has(s.name) && careerGames(s.name, games) >= MIN_RANKED_GAMES && Q.ok(s)).sort((a, b) => Q.rank(b) - Q.rank(a));
+      if (!c.length) return;
+      honoured.add(c[0].name);
+      A.push({ suit: "★", title: Q.t, w: { who: [c[0]] }, stat: Q.stat(c[0]), quip: Q.quip, special: true });
+    });
+    stats.filter(s => !honoured.has(s.name) && careerGames(s.name, games) >= MIN_RANKED_GAMES).forEach(s => A.push({ suit: "★", title: "Participation Trophy", w: { who: [s] }, stat: `${plural(s.games, "game")} played`, quip: "Turned up. Counted.", special: true }));
     $("awardsHint").textContent = state.period === "all" ? "All-time honours" : `${state.period} honours`;
-    $("awards").innerHTML = A.map(x => `<div class="award"><span class="suit ${"♥♦".includes(x.suit) ? "r" : ""}" aria-hidden="true">${x.suit}</span><span class="aname">${x.title}</span><span class="who">${names(x.w)}</span><span class="stat">${x.stat}</span><span class="quip">${x.quip}</span></div>`).join("");
+    $("awards").innerHTML = A.map(x => `<div class="award ${x.special ? "special" : ""}"><span class="suit ${"♥♦".includes(x.suit) ? "r" : ""}" aria-hidden="true">${x.suit}</span><span class="aname">${x.title}</span><span class="who">${names(x.w)}</span><span class="stat">${x.stat}</span><span class="quip">${x.quip}</span></div>`).join("");
   }
 
   function renderH2H(colors) {
