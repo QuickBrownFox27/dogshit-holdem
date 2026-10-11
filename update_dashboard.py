@@ -32,10 +32,7 @@ SITE_TAIL = """
 """
 # Corrected dates for games whose spreadsheet date is wrong. Once the sheet is fixed
 # the entry does nothing and can be deleted.
-DATE_FIXES = {
-    3: "2022-07-30",
-    4: "2022-11-18",
-}
+DATE_FIXES = {}  # e.g. {3: "2022-07-30"}
 PATTERN = re.compile(r"/\*DATA\*/(.*?)/\*END DATA\*/", re.S)
 
 
