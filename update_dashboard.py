@@ -123,6 +123,16 @@ def main():
 
     games = read_games()
     players = read_player_photos(games)
+    # Hand-written facts for profiles: player_notes.json {"Name": {"strengths": [...], "weaknesses": [...]}}
+    notes_file = HERE / "player_notes.json"
+    if notes_file.exists():
+        names = {e["p"].lower(): e["p"] for g in games for e in g["entries"]}
+        for raw, notes in json.loads(notes_file.read_text(encoding="utf-8")).items():
+            name = names.get(raw.strip().lower())
+            if not name:
+                print(f"Note: player_notes.json mentions '{raw}', who isn't in the results")
+                continue
+            players.setdefault(name, {})["notes"] = {k: [str(x) for x in v] for k, v in notes.items() if k in ("strengths", "weaknesses")}
     data = json.dumps({"settings": settings, "games": games, "players": players}, separators=(",", ":"))
     html = html[: m.start(1)] + data + html[m.end(1):]
     HTML.write_text(html, encoding="utf-8")
