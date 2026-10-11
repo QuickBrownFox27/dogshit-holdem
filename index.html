@@ -318,7 +318,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     </section>
     <section class="panel" aria-labelledby="oddsH">
       <div class="panel-h"><h2 id="oddsH">The Bookie</h2></div>
-      <p class="small" style="margin:0 0 6px">Prices to win the next game for ranked players (3+ games), worked from all-time win rate and recent form. Bragging rights only.</p>
+      <p class="small" style="margin:0 0 6px">Prices to win the next game for ranked players (3+ games). Built from win rate, average finishing position, overall profit and form over the last 4 games, with a 12% bookie's margin. Bragging rights only.</p>
       <div class="odds" id="odds"></div>
     </section>
   </div>
@@ -663,16 +663,22 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     const recent = new Set(g.slice(-4).flatMap(x => x.entries.map(e => e.p)));
     const stats = qualified(computeStats(g), g).filter(s => recent.has(s.name));
     const fieldAvg = avg(g.map(x => x.entries.length)) || 5;
+    // Each part is pulled towards average by two imaginary average games, so short records can't go extreme.
     const score = s => {
-      const base = (s.wins + 1 / fieldAvg * 2) / (s.games + 2);
-      const formBoost = avg(s.seq.slice(-4).map(x => x.place === 1 ? 1.5 : x.cash ? 1.15 : .8));
-      return base * formBoost;
+      const winRate = (s.wins + 2 / fieldAvg) / (s.games + 2);
+      // Finishing: 1 = always first, 0 = always last; an average finisher scores 0.5, giving a factor of 1
+      const finish = (s.pct.reduce((a, x) => a + (1 - x), 0) + 2 * .5) / (s.games + 2);
+      // Profit: return on buy-ins, with $100 of break-even buy-ins added, kept between 0.5 and 1.5
+      const profit = Math.max(.5, Math.min(1.5, 1 + s.net / (s.buyin + 100)));
+      const form = avg(s.seq.slice(-4).map(x => x.place === 1 ? 1.5 : x.cash ? 1.15 : .8));
+      // Square root softens finishing and profit so they adjust the win rate rather than swamp it
+      return winRate * Math.sqrt((finish / .5) * profit) * form;
     };
     const tot = stats.reduce((a, s) => a + score(s), 0) * 1.12; // the bookie's margin
     const rows = stats.map(s => ({ s, p: score(s) / tot })).sort((a, b) => b.p - a.p);
     $("odds").innerHTML = rows.map((o, i) => {
       const w = o.s.seq.slice(-4).filter(x => x.place === 1).length;
-      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} in ${o.s.games}` + (w ? ` · ${w} in the last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
+      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} in ${o.s.games} · ${money(o.s.net, true)} · avg finish ${o.s.avgPlace.toFixed(1)}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
       return `<div class="odd ${i === 0 ? "fav" : ""}"><div><span class="pname"><span class="chip" style="--c:${colors.get(o.s.name)}"></span>${esc(o.s.name)}${i === 0 ? ' <span class="pill hot">Fav</span>' : ""}</span><div class="why">${why}</div></div><span class="price">${toFraction(o.p)}</span></div>`;
     }).join("") || `<p class="small">Needs a few games first.</p>`;
   }
