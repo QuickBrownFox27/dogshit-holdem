@@ -266,6 +266,47 @@ label.fld { display: grid; gap: 4px; font-size: 12px; font-weight: 600; letter-s
 .mbtn:disabled { opacity: .5; cursor: default; }
 .err { color: var(--loss); font-size: 14px; font-weight: 600; }
 
+/* Clickable player names */
+.plink { cursor: pointer; }
+.pname.plink { border-bottom: 1px dotted transparent; }
+.pname.plink:hover, .pname.plink:focus-visible { border-bottom-color: currentColor; }
+.res.plink:hover { filter: brightness(.95); }
+
+/* How the odds work */
+.howto { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 10px; font-size: 13px; color: var(--ink-soft); }
+.howto summary { cursor: pointer; font-weight: 700; color: var(--ink); font-size: 14px; }
+.howto ol { padding-left: 20px; margin: 10px 0; display: grid; gap: 6px; }
+.howto b { color: var(--ink); }
+.howto p { margin: 0; }
+
+/* Player profile */
+.modal.profile { width: min(620px, 100%); gap: 16px; position: relative; overflow: hidden; }
+.pf-close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; font-size: 26px; line-height: 1; color: var(--ink-soft); padding: 4px 8px; }
+.pf-close:hover { color: var(--ink); }
+.pf-head { display: flex; gap: 14px; align-items: center; padding-right: 30px; }
+.pf-chip { width: 54px; height: 54px; border-radius: 50%; flex: none; background: var(--c); border: 5px dashed rgba(255,255,255,.85); box-shadow: 0 0 0 3px var(--c), 0 4px 10px rgba(0,0,0,.25); }
+.pf-title { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); font-weight: 700; }
+.pf-head h2 { font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1.05; }
+.pf-tag { font-style: italic; color: var(--ink-soft); margin-top: 2px; }
+.pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pf-stat { background: var(--card-2); border-radius: 8px; padding: 8px 10px; display: grid; }
+.pf-stat .k { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.pf-stat .v { font-family: var(--f-mono); font-weight: 600; font-size: 17px; }
+.pf-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pf-cols h3, .pf-facts h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
+.pf-cols ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; }
+.pf-good h3 { color: var(--gain); } .pf-bad h3 { color: var(--loss); }
+.pf-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; margin: 0; }
+.pf-facts dt { color: var(--ink-soft); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; align-self: center; }
+.pf-facts dd { margin: 0; }
+.pf-quote { font-family: var(--f-display); font-size: 20px; line-height: 1.25; border-left: 3px solid var(--gold); padding-left: 12px; }
+.pf-quote small { display: block; font-family: var(--f-body); font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+@media (max-width: 560px) {
+  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+  .pf-cols { grid-template-columns: 1fr; }
+  .pf-head h2 { font-size: 26px; }
+}
+
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--card); color: var(--ink); padding: 10px 18px; border-radius: 999px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.35); z-index: 30; max-width: calc(100% - 32px); }
 
 footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
@@ -306,7 +347,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
 
   <section class="panel" aria-labelledby="boardH">
-    <div class="panel-h"><h2 id="boardH">The Ledger</h2><span class="hint" id="boardHint">Cashed = walked away with at least your buy-in back.</span></div>
+    <div class="panel-h"><h2 id="boardH">The Ledger</h2><span class="hint" id="boardHint">Tap a player for their profile. Cashed = walked away with at least your buy-in back.</span></div>
     <div class="tablewrap" id="board"></div>
   </section>
 
@@ -320,6 +361,19 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       <div class="panel-h"><h2 id="oddsH">The Bookie</h2></div>
       <p class="small" style="margin:0 0 6px">Prices to win the next game for ranked players (3+ games). Built from win rate, average finishing position, overall profit and form over the last 4 games, with a 12% bookie's margin. Bragging rights only.</p>
       <div class="odds" id="odds"></div>
+      <details class="howto">
+        <summary>How the odds work</summary>
+        <ol>
+          <li><b>The field.</b> Anyone with 3+ games in total who played at least one of the last 4 games.</li>
+          <li><b>Win rate.</b> Wins &divide; games, padded with two imaginary average nights (about a 1-in-4.5 chance each) so a short record can't go extreme. One win from one game doesn't make you a certainty.</li>
+          <li><b>Finishing.</b> Where you usually finish, allowing for how many played. Always first scores 1, always last 0, average 0.5. Padded the same way.</li>
+          <li><b>Profit.</b> Lifetime profit &divide; total buy-ins (plus $100 of padding), turned into a factor between 0.5 and 1.5.</li>
+          <li><b>Form.</b> Your last 4 games: a win counts 1.5, getting your buy-in back 1.15, anything else 0.8. Averaged.</li>
+          <li><b>Score</b> = win rate &times; &radic;(finishing factor &times; profit factor) &times; form. The square root keeps finishing and profit as a nudge, not a takeover.</li>
+          <li><b>Prices.</b> Scores become chances, the bookie adds a 12% margin (like a real bookmaker), and each is rounded to the nearest standard price.</li>
+        </ol>
+        <p>Weights are judgement calls, not fitted to the results, and <span id="howtoGames">a handful of</span> games is a small sample. Treat them as bragging rights.</p>
+      </details>
     </section>
   </div>
 
@@ -347,6 +401,10 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   <footer id="foot">Results come from the comp spreadsheet.</footer>
 </div>
 
+<div class="overlay" id="profileModal" hidden>
+  <div class="modal profile" role="dialog" aria-modal="true" aria-labelledby="pfName" id="profileCard"></div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -355,7 +413,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   const DEFAULT_NAME = "Dogshit Holdem Invitational";
   const state = {
     games: [], settings: { name: DEFAULT_NAME, nextGame: "" },
-    period: "all", focus: null, sort: "net", logLimit: 6,
+    period: "all", focus: null, sort: "net",
     db: null, loaded: false, status: "loading",
     h2hA: null, h2hB: null,
   };
@@ -587,7 +645,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       const form = s.seq.slice(-5).reverse(); // most recent first
       const formHtml = form.map(x => `<span class="f ${x.place === 1 ? "w" : x.cash ? "c" : "x"}" title="Game ${x.num}: ${ord(x.place)}, ${money(x.net, true)}">${x.place}</span>`).join("") + Array.from({ length: 5 - form.length }, () => `<span class="f e"></span>`).join("");
       const st = s.streak.n >= 2 ? `<span class="pill ${s.streak.cash ? "hot" : "cold"}">${s.streak.cash ? "Cashed" : "Dry"} ${s.streak.n}</span>` : `<span class="small">–</span>`;
-      return divider + `<tr class="${r === 0 ? "first" : r === null ? "unranked" : ""}"><td class="rank l">${r === null ? "–" : r + 1}</td><td class="l"><span class="pname"><span class="chip" style="--c:${colors.get(s.name)}"></span>${esc(s.name)}</span>${mv}</td><td class="num netcell ${cls(s.net)}">${money(s.net, true)}</td><td class="num">${s.games}</td><td class="num">${s.wins}</td><td class="num">${Math.round(s.cashPct * 100)}%<span class="bar"><i style="width:${s.cashPct * 100}%"></i></span></td><td class="num ${cls(s.roi)}">${s.roi > 0 ? "+" : ""}${Math.round(s.roi * 100)}%</td><td class="num">${s.avgPlace.toFixed(1)}</td><td class="num ${cls(s.bestHaul.net)}">${money(s.bestHaul.net, true)}</td><td class="l"><span class="form">${formHtml}</span></td><td class="l">${st}</td></tr>`;
+      return divider + `<tr class="${r === 0 ? "first" : r === null ? "unranked" : ""}"><td class="rank l">${r === null ? "–" : r + 1}</td><td class="l"><span class="pname plink" data-player="${esc(s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(s.name)}"></span>${esc(s.name)}</span>${mv}</td><td class="num netcell ${cls(s.net)}">${money(s.net, true)}</td><td class="num">${s.games}</td><td class="num">${s.wins}</td><td class="num">${Math.round(s.cashPct * 100)}%<span class="bar"><i style="width:${s.cashPct * 100}%"></i></span></td><td class="num ${cls(s.roi)}">${s.roi > 0 ? "+" : ""}${Math.round(s.roi * 100)}%</td><td class="num">${s.avgPlace.toFixed(1)}</td><td class="num ${cls(s.bestHaul.net)}">${money(s.bestHaul.net, true)}</td><td class="l"><span class="form">${formHtml}</span></td><td class="l">${st}</td></tr>`;
     }).join("")}</tbody></table>`;
   }
 
@@ -658,7 +716,8 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     return best[1] === 1 && best[0] === 1 ? "Evens" : `${best[0]}/${best[1]}`;
   }
 
-  function renderOdds(colors) {
+  // The Bookie's book: ranked players who played any of the last 4 games, priced for the next game.
+  function bookOdds() {
     const g = allGames();
     const recent = new Set(g.slice(-4).flatMap(x => x.entries.map(e => e.p)));
     const stats = qualified(computeStats(g), g).filter(s => recent.has(s.name));
@@ -675,11 +734,16 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       return winRate * Math.sqrt((finish / .5) * profit) * form;
     };
     const tot = stats.reduce((a, s) => a + score(s), 0) * 1.12; // the bookie's margin
-    const rows = stats.map(s => ({ s, p: score(s) / tot })).sort((a, b) => b.p - a.p);
+    return stats.map(s => ({ s, p: score(s) / tot, price: toFraction(score(s) / tot) })).sort((a, b) => b.p - a.p);
+  }
+
+  function renderOdds(colors) {
+    const rows = bookOdds();
+    $("howtoGames").textContent = allGames().length;
     $("odds").innerHTML = rows.map((o, i) => {
       const w = o.s.seq.slice(-4).filter(x => x.place === 1).length;
       const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} in ${o.s.games} · ${money(o.s.net, true)} · avg finish ${o.s.avgPlace.toFixed(1)}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
-      return `<div class="odd ${i === 0 ? "fav" : ""}"><div><span class="pname"><span class="chip" style="--c:${colors.get(o.s.name)}"></span>${esc(o.s.name)}${i === 0 ? ' <span class="pill hot">Fav</span>' : ""}</span><div class="why">${why}</div></div><span class="price">${toFraction(o.p)}</span></div>`;
+      return `<div class="odd ${i === 0 ? "fav" : ""}"><div><span class="pname plink" data-player="${esc(o.s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(o.s.name)}"></span>${esc(o.s.name)}${i === 0 ? ' <span class="pill hot">Fav</span>' : ""}</span><div class="why">${why}</div></div><span class="price">${o.price}</span></div>`;
     }).join("") || `<p class="small">Needs a few games first.</p>`;
   }
 
@@ -693,7 +757,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
 
   function renderAwards(games, stats, colors) {
     const minG = Math.min(4, Math.max(2, Math.ceil(games.length / 3)));
-    const names = w => w.who.map(s => `<span class="pname"><span class="chip" style="--c:${colors.get(s.name)}"></span>${esc(s.name)}</span>`).join(" ");
+    const names = w => w.who.map(s => `<span class="pname plink" data-player="${esc(s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(s.name)}"></span>${esc(s.name)}</span>`).join(" ");
     const A = [];
     const add = (suit, title, w, stat, quip) => { if (w && w.who.length && w.who.length <= 3) A.push({ suit, title, w, stat, quip }); };
     let a;
@@ -752,22 +816,161 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       const champ = rankByNet(q.length ? q : all)[0];
       const winsTop = pickBest(all, s => s.wins);
       const live = y === cur;
-      return `<div class="hof-row"><span class="yr">${y}</span><div><span class="pname"><span class="chip" style="--c:${colors.get(champ.name)}"></span>${esc(champ.name)} ${live ? '<span class="pill hot">Leading</span>' : '<span aria-hidden="true">🏆</span>'}</span><div class="meta">${gs.length} game${gs.length === 1 ? "" : "s"} · most wins: ${winsTop.who.map(s => esc(s.name)).join(", ")} (${winsTop.val})</div></div><span class="num ${cls(champ.net)}" style="font-weight:600">${money(champ.net, true)}</span></div>`;
+      return `<div class="hof-row"><span class="yr">${y}</span><div><span class="pname plink" data-player="${esc(champ.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(champ.name)}"></span>${esc(champ.name)} ${live ? '<span class="pill hot">Leading</span>' : '<span aria-hidden="true">🏆</span>'}</span><div class="meta">${gs.length} game${gs.length === 1 ? "" : "s"} · most wins: ${winsTop.who.map(s => esc(s.name)).join(", ")} (${winsTop.val})</div></div><span class="num ${cls(champ.net)}" style="font-weight:600">${money(champ.net, true)}</span></div>`;
     }).join("");
   }
 
   function renderLog(colors) {
     const gs = allGames().reverse();
     $("logHint").textContent = `${gs.length} game${gs.length === 1 ? "" : "s"}, newest first`;
-    const shown = gs.slice(0, state.logLimit);
+    const shown = gs;
     $("log").innerHTML = shown.map(g => {
       const pot = g.entries.reduce((a, e) => a + e.buyin, 0), paid = g.entries.reduce((a, e) => a + e.won, 0);
       const es = [...g.entries].sort((a, b) => a.place - b.place || b.won - a.won);
       const off = paid - pot;
       return `<article class="game ${g.photo ? "has-photo" : ""} ${g.photo && g.pw > g.ph ? "wide-photo" : ""}">${g.photo ? `<a class="gphoto" href="${esc(g.photo)}" target="_blank" rel="noopener" title="Open full photo"><img src="${esc(g.photo)}" alt="Photo from game ${g.num}" loading="lazy" width="${g.pw}" height="${g.ph}" style="aspect-ratio:${g.pw} / ${g.ph}"></a>` : ""}<div class="game-h"><div class="gt"><span class="gn">Game ${g.num}</span><span class="gd">${esc(fmtDate(g.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }))}</span><span class="gp">${money(pot)} pot · ${g.entries.length} players</span>${off ? `<span class="pill warn" title="Payouts don't add up to the buy-ins">Payouts ${off > 0 ? "over" : "short"} by ${money(Math.abs(off))}</span>` : ""}</div></div>
-        <div class="results">${es.map(e => { const n = e.won - e.buyin; return `<span class="res ${e.place === 1 ? "w" : ""}"><span class="pl">${e.place === 1 ? "♛" : ord(e.place)}</span><span class="chip" style="--c:${colors.get(e.p)}"></span>${esc(e.p)}<span class="nt ${cls(n)}">${money(n, true)}</span></span>`; }).join("")}</div></article>`;
-    }).join("") + (gs.length > state.logLimit ? `<button type="button" class="mbtn more" data-act="more">Show ${Math.min(10, gs.length - state.logLimit)} more</button>` : "");
+        <div class="results">${es.map(e => { const n = e.won - e.buyin; return `<span class="res plink ${e.place === 1 ? "w" : ""}" data-player="${esc(e.p)}" role="button" tabindex="0" title="Open player profile"><span class="pl">${e.place === 1 ? "♛" : ord(e.place)}</span><span class="chip" style="--c:${colors.get(e.p)}"></span>${esc(e.p)}<span class="nt ${cls(n)}">${money(n, true)}</span></span>`; }).join("")}</div></article>`;
+    }).join("");
   }
+
+  /* ---------- player profiles ---------- */
+  // Each title goes to the best-matching player not already titled, in this order.
+  const TITLES = [
+    { t: "The Landlord", tag: "Everyone else just rents a seat.", quote: "I'm not saying I'm good. I'm saying check the ledger.", ok: s => s.net > 0, rank: s => s.net },
+    { t: "Patron of the Arts", tag: "Generously funds everyone else's night out.", quote: "It's a long game, mate.", ok: s => s.net < 0, rank: s => -s.net },
+    { t: "The Early Shower", tag: "First to the couch, most nights.", quote: "I had a read. The read was wrong.", ok: s => s.lasts >= 3, rank: s => s.lasts / s.games },
+    { t: "The Closer", tag: "Doesn't care about second.", quote: "Second is just the first loser.", ok: s => s.wins >= 3 && s.wins / s.games >= .25, rank: s => s.wins / s.games },
+    { t: "The Grinder", tag: "Never pretty, rarely broke.", quote: "A cash is a cash.", ok: s => s.games >= 5 && s.cashPct >= .5, rank: s => s.cashPct },
+    { t: "Bubble Boy", tag: "Knows exactly where the money stops.", quote: "So. Close.", ok: s => s.bubbles >= 2, rank: s => s.bubbles },
+    { t: "The Rookie Sensation", tag: "Turned up, won, now thinks this game is easy.", quote: "Is it always this easy?", ok: s => s.games < 3 && s.wins >= 1, rank: s => s.wins },
+    { t: "The Tourist", tag: "Popped in, had a look around, left.", quote: "Which one's the button again?", ok: s => s.games < 3, rank: s => -s.games },
+    { t: "The Apprentice", tag: "Still working out which chips are which.", quote: "Two pair beats a flush, right?", ok: s => s.games <= 4, rank: s => -s.games },
+    { t: "The Boom-or-Bust Merchant", tag: "Wins big, then gives it all back.", quote: "All in. Obviously.", ok: s => s.wins >= 2 && s.net < 0, rank: s => s.wins },
+    { t: "The Furniture", tag: "Part of the fixtures and fittings.", quote: "Same seat as always.", ok: (s, total) => s.games / total >= .8, rank: s => s.games },
+  ];
+  const WILDCARD = { t: "The Wildcard", tag: "Nobody knows what's coming. Including them.", quote: "You can't force dogshit." };
+
+  function assignTitles(stats, total) {
+    const map = new Map(), free = new Set(stats.map(s => s.name));
+    TITLES.forEach(T => {
+      const c = stats.filter(s => free.has(s.name) && T.ok(s, total)).sort((a, b) => T.rank(b) - T.rank(a));
+      if (c.length) { map.set(c[0].name, T); free.delete(c[0].name); }
+    });
+    free.forEach(n => map.set(n, WILDCARD));
+    return map;
+  }
+
+  // Nemesis: the player they finish behind most (net). Owns: the one they finish ahead of most. Min 3 shared games.
+  function rivals(name) {
+    const r = {};
+    allGames().forEach(g => {
+      const me = g.entries.find(e => e.p === name); if (!me) return;
+      g.entries.forEach(o => {
+        if (o.p === name) return;
+        const x = r[o.p] || (r[o.p] = { n: 0, a: 0, b: 0 });
+        x.n++; if (me.place < o.place) x.a++; else if (o.place < me.place) x.b++;
+      });
+    });
+    let nem = null, own = null;
+    Object.entries(r).forEach(([p, x]) => {
+      if (x.n < 3) return;
+      const d = x.b - x.a;
+      if (d > 0 && (!nem || d > nem.d)) nem = { p, ...x, d };
+      if (d < 0 && (!own || -d > own.d)) own = { p, ...x, d: -d };
+    });
+    return { nem, own };
+  }
+
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+  function openProfile(name) {
+    const g = allGames(), stats = computeStats(g), s = stats.find(x => x.name === name);
+    if (!s) return;
+    const total = g.length, colors = colorMap(), T = assignTitles(stats, total).get(name);
+    const fieldAvg = avg(g.map(x => x.entries.length));
+    const { nem, own } = rivals(name);
+    const pct = x => Math.round(x * 100);
+    const best = s.seq.reduce((a, x) => x.net > a.net ? x : a), worst = s.seq.reduce((a, x) => x.net < a.net ? x : a);
+    const careers = careerGames(name, g);
+
+    const good = [], bad = [];
+    if (s.net > 0) good.push(`Actually up money: <b>${money(s.net, true)}</b> lifetime. Rare air in this comp.`);
+    if (s.games >= 3 && s.wins / s.games > 1 / fieldAvg) good.push(`Knows how to close: ${plural(s.wins, "win")} from ${s.games} games (${pct(s.wins / s.games)}%).`);
+    if (s.games < 3 && s.wins) good.push(`${pct(s.wins / s.games)}% win rate. Small sample, enormous ego.`);
+    if (s.games >= 3 && s.avgPlace < (fieldAvg + 1) / 2 - .2) good.push(`Goes deep: average finish ${s.avgPlace.toFixed(1)}.`);
+    if (s.games >= 3 && s.cashPct >= .5) good.push(`Gets the buy-in back ${pct(s.cashPct)}% of the time.`);
+    if (s.maxCash >= 3) good.push(`Can run hot: ${s.maxCash} nights in a row without losing money.`);
+    if (s.bestHaul.won >= 150) good.push(`Capable of a monster night: ${money(s.bestHaul.won)} in game ${s.bestHaul.num}.`);
+    if (own) good.push(`Owns ${esc(own.p)}: finished ahead ${own.a} of ${own.n} times.`);
+    if (s.games / total >= .9) good.push(`Never misses: ${s.games} of ${total} games.`);
+    if (s.rebuys === 0 && s.games >= 5) good.push("Has never needed a rebuy.");
+    if (s.games >= 3 && s.last3 > 0) good.push(`In form: ${money(s.last3, true)} a game over the last 3.`);
+    if (!good.length) good.push("Turns up, keeps the pot healthy, never complains. Everyone's favourite opponent.");
+
+    if (s.net < 0) bad.push(`Lifetime donor: <b>${money(s.net, true)}</b>.`);
+    if (s.lasts >= 2) bad.push(`Finished dead last ${s.lasts} times. Knows the couch well.`);
+    if (s.bubbles >= 2) bad.push(`First home with nothing ${s.bubbles} times.`);
+    if (s.maxDry >= 3) bad.push(`Cold spells: ${s.maxDry} nights in a row going home down.`);
+    if (s.wins === 0) bad.push("Still hunting a first win.");
+    if (s.games >= 3 && s.cashPct < .4) bad.push(`Gets the buy-in back only ${pct(s.cashPct)}% of the time.`);
+    if (nem) bad.push(`Can't solve ${esc(nem.p)}: finished behind them ${nem.b} of ${nem.n} times.`);
+    if (s.rebuys >= 1) bad.push(`Reloads: ${plural(s.rebuys, "rebuy")}.`);
+    if (s.games >= 3 && s.games / total < .5) bad.push(`Part-timer: ${s.games} of ${total} games.`);
+    if (s.games < 3) bad.push(`Sample size of a cocktail sausage: ${plural(s.games, "game")}.`);
+    if (s.games >= 3 && s.last3 < -25) bad.push(`Current form: ice cold (${money(s.last3, true)} a game over the last 3).`);
+    if (!bad.length) bad.push("Being completely insufferable about it.");
+
+    const places = {}; s.places.forEach(p => places[p] = (places[p] || 0) + 1);
+    const usual = +Object.entries(places).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+    const years = {}; s.seq.forEach(x => { const y = x.date.slice(0, 4); years[y] = (years[y] || 0) + x.net; });
+    const bestYear = Object.entries(years).sort((a, b) => b[1] - a[1])[0];
+    const ranked = rankByNet(qualified(stats, g)), rank = ranked.findIndex(x => x.name === name);
+    const book = bookOdds().find(o => o.s.name === name);
+    const price = book ? `<b>${book.price}</b> to win the next game` : careers < MIN_RANKED_GAMES ? `Not priced: needs ${plural(MIN_RANKED_GAMES - careers, "more game")}` : "Not priced: hasn't played any of the last 4 games";
+    const night = x => `Game ${x.num}, ${esc(fmtDate(x.date))}: <span class="${cls(x.net)}">${money(x.net, true)}</span> (${ord(x.place)} of ${x.field})`;
+
+    $("profileCard").innerHTML = `<button type="button" class="pf-close" id="pfClose" aria-label="Close profile">×</button>
+      <div class="pf-head"><span class="pf-chip" style="--c:${colors.get(name)}"></span><div><div class="pf-title">${T.t}</div><h2 id="pfName">${esc(name)}</h2><div class="pf-tag">${T.tag}</div></div></div>
+      <div class="pf-stats">
+        <div class="pf-stat"><span class="k">Profit</span><span class="v ${cls(s.net)}">${money(s.net, true)}</span></div>
+        <div class="pf-stat"><span class="k">Ledger</span><span class="v">${rank >= 0 ? ord(rank + 1) : "Unranked"}</span></div>
+        <div class="pf-stat"><span class="k">Wins</span><span class="v">${s.wins} / ${s.games}</span></div>
+        <div class="pf-stat"><span class="k">Avg finish</span><span class="v">${s.avgPlace.toFixed(1)}</span></div>
+      </div>
+      <div class="pf-cols">
+        <div class="pf-good"><h3>Strengths</h3><ul>${good.slice(0, 3).map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="pf-bad"><h3>Weaknesses</h3><ul>${bad.slice(0, 3).map(x => `<li>${x}</li>`).join("")}</ul></div>
+      </div>
+      <dl class="pf-facts">
+        <dt>Best night</dt><dd>${night(best)}</dd>
+        ${s.games > 1 ? `<dt>Worst night</dt><dd>${night(worst)}</dd>` : ""}
+        <dt>Usual finish</dt><dd>${ord(usual)} (${plural(places[usual], "time")})</dd>
+        ${Object.keys(years).length > 1 ? `<dt>Best season</dt><dd>${bestYear[0]} (<span class="${cls(bestYear[1])}">${money(bestYear[1], true)}</span>)</dd>` : ""}
+        ${nem ? `<dt>Nemesis</dt><dd>${esc(nem.p)} (behind them ${nem.b} of ${nem.n})</dd>` : ""}
+        ${own ? `<dt>Owns</dt><dd>${esc(own.p)} (ahead ${own.a} of ${own.n})</dd>` : ""}
+        <dt>The Bookie</dt><dd>${price}</dd>
+      </dl>
+      <div class="pf-quote">&ldquo;${T.quote}&rdquo;<small>Probably ${esc(name)}, at some point</small></div>`;
+    profileReturn = document.activeElement;
+    $("profileModal").hidden = false;
+    $("pfClose").focus();
+  }
+  let profileReturn = null;
+  function closeProfile() {
+    if ($("profileModal").hidden) return;
+    $("profileModal").hidden = true;
+    if (profileReturn && profileReturn.focus) profileReturn.focus();
+  }
+  document.addEventListener("click", e => {
+    if (e.target.id === "profileModal" || e.target.closest("#pfClose")) return closeProfile();
+    const p = e.target.closest("[data-player]");
+    if (p) openProfile(p.dataset.player);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") return closeProfile();
+    const p = e.target.closest && e.target.closest("[data-player]");
+    if (p && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openProfile(p.dataset.player); }
+  });
 
   /* ---------- page clicks ---------- */
   document.addEventListener("click", async e => {
@@ -775,7 +978,6 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (t.dataset.period) { state.period = t.dataset.period; state.focus = null; try { localStorage.setItem("hg-period", state.period); } catch (x) {} return render(); }
     if (t.dataset.sort) { state.sort = t.dataset.sort; return render(); }
     if (t.dataset.focus !== undefined) { state.focus = state.focus === t.dataset.focus ? null : t.dataset.focus; return render(); }
-    if (t.dataset.act === "more") { state.logLimit += 10; return render(); }
   });
   document.addEventListener("change", e => {
     if (e.target.id === "h2hA") { state.h2hA = e.target.value; if (state.h2hB === state.h2hA) state.h2hB = null; render(); }
