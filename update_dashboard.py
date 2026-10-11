@@ -30,6 +30,12 @@ SITE_TAIL = """
 </body>
 </html>
 """
+# Corrected dates for games whose spreadsheet date is wrong. Once the sheet is fixed
+# the entry does nothing and can be deleted.
+DATE_FIXES = {
+    3: "2022-07-30",
+    4: "2022-11-18",
+}
 PATTERN = re.compile(r"/\*DATA\*/(.*?)/\*END DATA\*/", re.S)
 
 
@@ -43,6 +49,10 @@ def read_games():
             continue
         g = games.setdefault(num, {"num": num, "date": date.strftime("%Y-%m-%d"), "entries": []})
         g["entries"].append({"p": str(player).strip(), "buyin": buyin or 0, "won": won or 0, "place": place or 1})
+    for num, fixed in DATE_FIXES.items():
+        if num in games and games[num]["date"] != fixed:
+            print(f"Note: game {num} is dated {games[num]['date']} in the spreadsheet; using {fixed}. Fix the sheet to match.")
+            games[num]["date"] = fixed
     # A photo for a game is picked up from photos/game<N>.<ext> ("game 13.jpg" gets renamed to "game13.jpg")
     photos = HERE / "photos"
     if photos.is_dir():
@@ -56,9 +66,9 @@ def read_games():
             if path.exists():
                 g["photo"] = f"photos/game{g['num']}.{ext}"
                 try:
-                    from PIL import Image
+                    from PIL import Image, ImageOps
                     with Image.open(path) as im:
-                        g["photoW"], g["photoH"] = im.size
+                        g["photoW"], g["photoH"] = ImageOps.exif_transpose(im).size
                 except Exception:
                     pass
                 break
