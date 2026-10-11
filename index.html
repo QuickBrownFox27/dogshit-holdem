@@ -566,7 +566,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (g.length) {
       const pot = g.reduce((s, x) => s + x.entries.reduce((a, e) => a + e.buyin, 0), 0);
       const players = new Set(g.flatMap(x => x.entries.map(e => e.p))).size;
-      $("since").textContent = `Forcing dogshit since ${fmtDate(g[0].date, { month: "long", year: "numeric" })}`;
+      $("since").textContent = `Forcing dogshit hands since ${g[0].date.slice(0, 4)}`;
       $("subline").textContent = `${g.length} games, ${players} players and ${money(pot)} pushed across the felt.`;
     } else if (state.loaded) {
       $("subline").textContent = "A running ledger for poker night: standings, form, trophies and bragging rights.";
