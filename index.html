@@ -148,6 +148,8 @@ table.board { width: 100%; border-collapse: collapse; min-width: 760px; }
 .f.c { background: var(--gain-bg); color: var(--gain); }
 .f.x { background: var(--loss-bg); color: var(--loss); }
 .f.e { background: transparent; border: 1px dashed var(--rule); }
+.f.h { width: 20px; height: auto; font-size: 9px; letter-spacing: 0; color: var(--ink-soft); font-weight: 600; }
+.form.fh { margin-top: 3px; }
 .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .pill.hot { background: var(--gain-bg); color: var(--gain); }
 .pill.cold { background: var(--loss-bg); color: var(--loss); }
@@ -639,8 +641,9 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     const unranked = stats.filter(s => !netRank.has(s.name)).sort(bySort);
     const rows = [...ranked, ...unranked];
     const lastGame = games.at(-1);
+    const recent = games.slice(-5).reverse(); // the last 5 games of the period, newest first: one column each
     const th = (k, label, l) => `<th class="${l ? "l" : ""}" ${state.sort === k ? 'aria-sort="descending"' : ""}><button type="button" data-sort="${k}">${label}${state.sort === k ? " ↓" : ""}</button></th>`;
-    $("board").innerHTML = `<table class="board"><thead><tr><th class="l">#</th><th class="l">Player</th>${th("net", "Profit")}${th("games", "Games")}${th("wins", "Wins")}${th("cash", "Cashed")}${th("roi", "ROI")}${th("avgp", "Avg finish")}${th("best", "Best night")}<th class="l" title="Most recent game on the left">Last 5 (newest first)</th><th class="l">Streak</th></tr></thead><tbody>${rows.map((s, idx) => {
+    $("board").innerHTML = `<table class="board"><thead><tr><th class="l">#</th><th class="l">Player</th>${th("net", "Profit")}${th("games", "Games")}${th("wins", "Wins")}${th("cash", "Cashed")}${th("roi", "ROI")}${th("avgp", "Avg finish")}${th("best", "Best night")}<th class="l" title="The last 5 games, newest on the left. Blank = didn't play.">Last 5 games<br><span class="form fh">${recent.map(g => `<span class="f h">G${g.num}</span>`).join("")}</span></th><th class="l">Streak</th></tr></thead><tbody>${rows.map((s, idx) => {
       const r = netRank.has(s.name) ? netRank.get(s.name) : null;
       const divider = idx === ranked.length ? `<tr class="unranked-h"><td colspan="11">Not ranked yet · ${MIN_RANKED_GAMES} games in total needed to earn a place</td></tr>` : "";
       let mv = "";
@@ -650,8 +653,10 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
         if (d > 0) mv = `<span class="move up" title="Up ${d} after the last game">▲${d}</span>`;
         else if (d < 0) mv = `<span class="move down" title="Down ${-d} after the last game">▼${-d}</span>`;
       } else if (!prevRank.has(s.name) && games.length > 1) mv = `<span class="move up" title="Newly ranked">new</span>`;
-      const form = s.seq.slice(-5).reverse(); // most recent first
-      const formHtml = form.map(x => `<span class="f ${x.place === 1 ? "w" : x.cash ? "c" : "x"}" title="Game ${x.num}: ${ord(x.place)}, ${money(x.net, true)}">${x.place}</span>`).join("") + Array.from({ length: 5 - form.length }, () => `<span class="f e"></span>`).join("");
+      const formHtml = recent.map(g => {
+        const x = s.seq.find(q => q.num === g.num);
+        return x ? `<span class="f ${x.place === 1 ? "w" : x.cash ? "c" : "x"}" title="Game ${x.num}: ${ord(x.place)}, ${money(x.net, true)}">${x.place}</span>` : `<span class="f e" title="Game ${g.num}: didn't play"></span>`;
+      }).join("");
       const st = s.streak.n >= 2 ? `<span class="pill ${s.streak.cash ? "hot" : "cold"}">${s.streak.cash ? "Cashed" : "Dry"} ${s.streak.n}</span>` : `<span class="small">–</span>`;
       return divider + `<tr class="${r === 0 ? "first" : r === null ? "unranked" : ""}"><td class="rank l">${r === null ? "–" : r + 1}</td><td class="l"><span class="pname plink" data-player="${esc(s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(s.name)}"></span>${esc(s.name)}</span>${mv}</td><td class="num netcell ${cls(s.net)}">${money(s.net, true)}</td><td class="num">${s.games}</td><td class="num">${s.wins}</td><td class="num">${Math.round(s.cashPct * 100)}%<span class="bar"><i style="width:${s.cashPct * 100}%"></i></span></td><td class="num ${cls(s.roi)}">${s.roi > 0 ? "+" : ""}${Math.round(s.roi * 100)}%</td><td class="num">${s.avgPlace.toFixed(1)}</td><td class="num ${cls(s.bestHaul.net)}">${money(s.bestHaul.net, true)}</td><td class="l"><span class="form">${formHtml}</span></td><td class="l">${st}</td></tr>`;
     }).join("")}</tbody></table>`;
