@@ -379,11 +379,11 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
         <summary>How the odds work</summary>
         <ol>
           <li><b>The field.</b> Starts as every ranked player (3+ games) who played at least one of the last 4 games. Tick or untick names under "Who's in?" to price the actual table.</li>
+          <li><b>Recent games count more.</b> Everything below is time-weighted with a 6-game half-life: last night counts in full, a game 6 comp games ago counts half, 12 games ago a quarter. Missed games still age your old results.</li>
           <li><b>Wins against expected.</b> Each game is worth 1 &divide; the number of players that night, so a win at a 6-player table counts for more than one at a 3-player table. Your wins are compared with what an average player would expect from the same nights, padded with two imaginary average games so a short record stays close to average.</li>
           <li><b>Finishing.</b> Where you usually finish, allowing for table size. Always first scores 1, always last 0, average 0.5. Padded the same way.</li>
-          <li><b>Profit.</b> Lifetime profit &divide; total buy-ins (plus $100 of padding), turned into a factor between 0.5 and 1.5.</li>
-          <li><b>Form.</b> Your finishing position over the last 4 games, as a small nudge between 0.9 and 1.2. It uses finishes, not wins, so a recent win isn't counted twice.</li>
-          <li><b>Score</b> = wins factor &times; &radic;(finishing factor &times; profit factor) &times; form. The square root keeps finishing and profit as adjustments, not a takeover.</li>
+          <li><b>Profit.</b> Profit &divide; buy-ins (plus $100 of padding), turned into a factor between 0.5 and 1.5.</li>
+          <li><b>Score</b> = wins factor &times; &radic;(finishing factor &times; profit factor). The square root keeps finishing and profit as adjustments, not a takeover. There's no separate form factor: the time weighting already does that job, without counting a recent win twice.</li>
           <li><b>Prices.</b> Scores become chances, the bookie adds a 12% margin, and each is rounded to the nearest standard price. Rounding shifts the margin a little, so the real total is shown under the prices as "Book".</li>
         </ol>
         <p>Weights are judgement calls, not fitted to the results, and <span id="howtoGames">a handful of</span> games is a small sample. Treat them as bragging rights.</p>
@@ -755,20 +755,25 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     const { ranked, field } = bookPlayers();
     const playing = new Set(names || field);
     const stats = ranked.filter(s => playing.has(s.name));
+    // Recency: every part is time-weighted with a 6-game half-life, so last night counts fully,
+    // a game 6 comp games ago counts half, 12 games ago a quarter. This replaces a separate form factor.
+    const g = allGames(), age = new Map(g.map((x, i) => [x.num, g.length - 1 - i]));
     const score = s => {
+      const w = s.seq.map(x => Math.pow(.5, age.get(x.num) / 6)), W = w.reduce((a, b) => a + b, 0);
       // Wins against expected: each game is worth 1 / (players that night). Padded with two average games
       // at their usual table size, so a short record stays close to average.
-      const expected = s.seq.reduce((a, x) => a + 1 / x.field, 0);
-      const pad = 2 * expected / s.games;
-      const winFactor = (s.wins + pad) / (expected + pad);
+      const expected = s.seq.reduce((a, x, i) => a + w[i] / x.field, 0);
+      const wins = s.seq.reduce((a, x, i) => a + (x.place === 1 ? w[i] : 0), 0);
+      const pad = 2 * expected / W;
+      const winFactor = (wins + pad) / (expected + pad);
       // Finishing: 1 = always first, 0 = always last; average 0.5 gives a factor of 1. Padded with two average results.
-      const finish = (s.pct.reduce((a, x) => a + (1 - x), 0) + 2 * .5) / (s.games + 2);
+      const finish = (s.pct.reduce((a, x, i) => a + w[i] * (1 - x), 0) + 2 * .5) / (W + 2);
       // Profit: return on buy-ins, with $100 of break-even buy-ins added, kept between 0.5 and 1.5
-      const profit = Math.max(.5, Math.min(1.5, 1 + s.net / (s.buyin + 100)));
-      // Form: finishing position over the last 4 games (not wins, so a win isn't counted twice), kept to 0.9-1.2
-      const form = .9 + .3 * avg(s.pct.slice(-4).map(x => 1 - x));
+      const net = s.seq.reduce((a, x, i) => a + w[i] * x.net, 0), buy = s.seq.reduce((a, x, i) => a + w[i] * x.buyin, 0);
+      const profit = Math.max(.5, Math.min(1.5, 1 + net / (buy + 100)));
       // Square root softens finishing and profit so they adjust the win factor rather than swamp it
-      return { score: winFactor * Math.sqrt((finish / .5) * profit) * form, expected };
+      const last6 = s.seq.filter(x => age.get(x.num) < 6);
+      return { score: winFactor * Math.sqrt((finish / .5) * profit), expected: s.seq.reduce((a, x) => a + 1 / x.field, 0), recent: last6.length ? avg(last6.map(x => x.net)) : null };
     };
     const scored = stats.map(s => ({ s, ...score(s) }));
     const tot = scored.reduce((a, o) => a + o.score, 0);
@@ -790,7 +795,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (!rows.length) { $("odds").innerHTML = `<p class="small">Tick at least two players to price a table.</p>`; return; }
     $("odds").innerHTML = rows.map((o, i) => {
       const w = o.s.seq.slice(-4).filter(x => x.place === 1).length;
-      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} (${o.expected.toFixed(1)} expected) in ${o.s.games} · ${money(o.s.net, true)} · avg finish ${o.s.avgPlace.toFixed(1)}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
+      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} (${o.expected.toFixed(1)} expected) in ${o.s.games} · ${money(o.s.net, true)} overall${o.recent === null ? "" : ` · ${money(o.recent, true)} a game lately`}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
       return `<div class="odd ${i === 0 ? "fav" : ""}"><div><span class="pname plink" data-player="${esc(o.s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(o.s.name)}"></span>${esc(o.s.name)}${i === 0 ? ' <span class="pill hot">Fav</span>' : ""}</span><div class="why">${why}</div></div><span class="price">${o.price}</span></div>`;
     }).join("") || `<p class="small">Needs a few games first.</p>`;
   }
