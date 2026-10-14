@@ -280,6 +280,15 @@ label.fld { display: grid; gap: 4px; font-size: 12px; font-weight: 600; letter-s
 .pname.plink:hover, .pname.plink:focus-visible { border-bottom-color: currentColor; }
 .res.plink:hover { filter: brightness(.95); }
 
+/* Who's in? */
+.whosin { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.inbtn { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 3px 10px 3px 6px; display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.inbtn .chip { width: 10px; height: 10px; border-width: 1px; opacity: .35; }
+.inbtn[aria-pressed="true"] { background: var(--card-2); color: var(--ink); border-color: var(--ink-soft); }
+.inbtn[aria-pressed="true"] .chip { opacity: 1; }
+.inbtn.reset { padding: 3px 10px; font-weight: 500; border-style: dashed; }
+.booktotal { margin: 8px 0 0; }
+
 /* How the odds work */
 .howto { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 10px; font-size: 13px; color: var(--ink-soft); }
 .howto summary { cursor: pointer; font-weight: 700; color: var(--ink); font-size: 14px; }
@@ -370,18 +379,20 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     </section>
     <section class="panel" aria-labelledby="oddsH">
       <div class="panel-h"><h2 id="oddsH">The Bookie</h2></div>
-      <p class="small" style="margin:0 0 6px">Prices to win the next game for ranked players (3+ games). Built from win rate, average finishing position, overall profit and form over the last 4 games, with a 12% bookie's margin. Bragging rights only.</p>
+      <p class="small" style="margin:0 0 6px">Prices to win the next game for ranked players (3+ games). Tick who's in to price that night's table. Bragging rights only.</p>
+      <div class="whosin" id="whosIn" role="group" aria-label="Who's playing"></div>
       <div class="odds" id="odds"></div>
+      <p class="small booktotal" id="bookTotal"></p>
       <details class="howto">
         <summary>How the odds work</summary>
         <ol>
-          <li><b>The field.</b> Anyone with 3+ games in total who played at least one of the last 4 games.</li>
-          <li><b>Win rate.</b> Wins &divide; games, padded with two imaginary average nights (about a 1-in-4.5 chance each) so a short record can't go extreme. One win from one game doesn't make you a certainty.</li>
-          <li><b>Finishing.</b> Where you usually finish, allowing for how many played. Always first scores 1, always last 0, average 0.5. Padded the same way.</li>
+          <li><b>The field.</b> Starts as every ranked player (3+ games) who played at least one of the last 4 games. Tick or untick names under "Who's in?" to price the actual table.</li>
+          <li><b>Wins against expected.</b> Each game is worth 1 &divide; the number of players that night, so a win at a 6-player table counts for more than one at a 3-player table. Your wins are compared with what an average player would expect from the same nights, padded with two imaginary average games so a short record stays close to average.</li>
+          <li><b>Finishing.</b> Where you usually finish, allowing for table size. Always first scores 1, always last 0, average 0.5. Padded the same way.</li>
           <li><b>Profit.</b> Lifetime profit &divide; total buy-ins (plus $100 of padding), turned into a factor between 0.5 and 1.5.</li>
-          <li><b>Form.</b> Your last 4 games: a win counts 1.5, getting your buy-in back 1.15, anything else 0.8. Averaged.</li>
-          <li><b>Score</b> = win rate &times; &radic;(finishing factor &times; profit factor) &times; form. The square root keeps finishing and profit as a nudge, not a takeover.</li>
-          <li><b>Prices.</b> Scores become chances, the bookie adds a 12% margin (like a real bookmaker), and each is rounded to the nearest standard price.</li>
+          <li><b>Form.</b> Your finishing position over the last 4 games, as a small nudge between 0.9 and 1.2. It uses finishes, not wins, so a recent win isn't counted twice.</li>
+          <li><b>Score</b> = wins factor &times; &radic;(finishing factor &times; profit factor) &times; form. The square root keeps finishing and profit as adjustments, not a takeover.</li>
+          <li><b>Prices.</b> Scores become chances, the bookie adds a 12% margin, and each is rounded to the nearest standard price. Rounding shifts the margin a little, so the real total is shown under the prices as "Book".</li>
         </ol>
         <p>Weights are judgement calls, not fitted to the results, and <span id="howtoGames">a handful of</span> games is a small sample. Treat them as bragging rights.</p>
       </details>
@@ -424,7 +435,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   const DEFAULT_NAME = "Dogshit Holdem Invitational";
   const state = {
     games: [], settings: { name: DEFAULT_NAME, nextGame: "" },
-    period: "all", focus: null, sort: "net",
+    period: "all", focus: null, sort: "net", oddsIn: null,
     db: null, loaded: false, status: "loading",
     h2hA: null, h2hB: null,
   };
@@ -730,40 +741,64 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   }
 
   const FRACTIONS = [[1, 4], [2, 7], [1, 3], [2, 5], [1, 2], [4, 6], [4, 5], [1, 1], [6, 5], [6, 4], [7, 4], [2, 1], [9, 4], [5, 2], [3, 1], [7, 2], [4, 1], [9, 2], [5, 1], [6, 1], [7, 1], [8, 1], [10, 1], [12, 1], [14, 1], [16, 1], [20, 1], [25, 1], [33, 1], [50, 1]];
-  function toFraction(p) {
+  function nearestPrice(p) {
     const dec = (1 - p) / p;
     let best = FRACTIONS[0];
     FRACTIONS.forEach(f => { if (Math.abs(Math.log((f[0] / f[1]) / dec)) < Math.abs(Math.log((best[0] / best[1]) / dec))) best = f; });
-    return best[1] === 1 && best[0] === 1 ? "Evens" : `${best[0]}/${best[1]}`;
+    return best;
   }
+  const priceText = f => f[0] === 1 && f[1] === 1 ? "Evens" : `${f[0]}/${f[1]}`;
+  const toFraction = p => priceText(nearestPrice(p));
 
   // The Bookie's book: ranked players who played any of the last 4 games, priced for the next game.
-  function bookOdds() {
-    const g = allGames();
-    const recent = new Set(g.slice(-4).flatMap(x => x.entries.map(e => e.p)));
-    const stats = qualified(computeStats(g), g).filter(s => recent.has(s.name));
-    const fieldAvg = avg(g.map(x => x.entries.length)) || 5;
-    // Each part is pulled towards average by two imaginary average games, so short records can't go extreme.
+  // Ranked players who can be priced, and the default field: those who played any of the last 4 games.
+  function bookPlayers() {
+    const g = allGames(), recent = new Set(g.slice(-4).flatMap(x => x.entries.map(e => e.p)));
+    const ranked = rankByNet(qualified(computeStats(g), g));
+    return { ranked, field: ranked.filter(s => recent.has(s.name)).map(s => s.name) };
+  }
+
+  // The Bookie's book for a given table (default: the usual field).
+  function bookOdds(names) {
+    const { ranked, field } = bookPlayers();
+    const playing = new Set(names || field);
+    const stats = ranked.filter(s => playing.has(s.name));
     const score = s => {
-      const winRate = (s.wins + 2 / fieldAvg) / (s.games + 2);
-      // Finishing: 1 = always first, 0 = always last; an average finisher scores 0.5, giving a factor of 1
+      // Wins against expected: each game is worth 1 / (players that night). Padded with two average games
+      // at their usual table size, so a short record stays close to average.
+      const expected = s.seq.reduce((a, x) => a + 1 / x.field, 0);
+      const pad = 2 * expected / s.games;
+      const winFactor = (s.wins + pad) / (expected + pad);
+      // Finishing: 1 = always first, 0 = always last; average 0.5 gives a factor of 1. Padded with two average results.
       const finish = (s.pct.reduce((a, x) => a + (1 - x), 0) + 2 * .5) / (s.games + 2);
       // Profit: return on buy-ins, with $100 of break-even buy-ins added, kept between 0.5 and 1.5
       const profit = Math.max(.5, Math.min(1.5, 1 + s.net / (s.buyin + 100)));
-      const form = avg(s.seq.slice(-4).map(x => x.place === 1 ? 1.5 : x.cash ? 1.15 : .8));
-      // Square root softens finishing and profit so they adjust the win rate rather than swamp it
-      return winRate * Math.sqrt((finish / .5) * profit) * form;
+      // Form: finishing position over the last 4 games (not wins, so a win isn't counted twice), kept to 0.9-1.2
+      const form = .9 + .3 * avg(s.pct.slice(-4).map(x => 1 - x));
+      // Square root softens finishing and profit so they adjust the win factor rather than swamp it
+      return { score: winFactor * Math.sqrt((finish / .5) * profit) * form, expected };
     };
-    const tot = stats.reduce((a, s) => a + score(s), 0) * 1.12; // the bookie's margin
-    return stats.map(s => ({ s, p: score(s) / tot, price: toFraction(score(s) / tot) })).sort((a, b) => b.p - a.p);
+    const scored = stats.map(s => ({ s, ...score(s) }));
+    const tot = scored.reduce((a, o) => a + o.score, 0);
+    // Fair chance = score / total; the bookie adds a 12% margin by shortening every price
+    const rows = scored.map(o => { const fair = o.score / tot, f = nearestPrice(Math.min(.95, fair * 1.12)); return { ...o, p: fair, price: priceText(f), implied: f[1] / (f[0] + f[1]) }; }).sort((a, b) => b.p - a.p);
+    rows.book = rows.reduce((a, o) => a + o.implied, 0); // the real margin after rounding to standard prices
+    return rows;
   }
 
   function renderOdds(colors) {
-    const rows = bookOdds();
+    const { ranked, field } = bookPlayers();
+    const names = ranked.map(s => s.name);
+    if (!state.oddsIn || state.oddsIn.some(n => !names.includes(n))) state.oddsIn = field.slice();
+    const rows = state.oddsIn.length >= 2 ? bookOdds(state.oddsIn) : [];
     $("howtoGames").textContent = allGames().length;
+    $("whosIn").innerHTML = `<span class="small">Who's in?</span>` + names.map(n => `<button type="button" class="inbtn" data-in="${esc(n)}" aria-pressed="${state.oddsIn.includes(n)}"><span class="chip" style="--c:${colors.get(n)}"></span>${esc(n)}</button>`).join("") +
+      (state.oddsIn.join() !== field.join() ? `<button type="button" class="inbtn reset" data-in-reset="1">Usual field</button>` : "");
+    $("bookTotal").textContent = rows.length ? `Book: ${Math.round(rows.book * 100)}% (the bookie's margin after rounding to standard prices)` : "";
+    if (!rows.length) { $("odds").innerHTML = `<p class="small">Tick at least two players to price a table.</p>`; return; }
     $("odds").innerHTML = rows.map((o, i) => {
       const w = o.s.seq.slice(-4).filter(x => x.place === 1).length;
-      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} in ${o.s.games} · ${money(o.s.net, true)} · avg finish ${o.s.avgPlace.toFixed(1)}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
+      const why = `${o.s.wins} win${o.s.wins === 1 ? "" : "s"} (${o.expected.toFixed(1)} expected) in ${o.s.games} · ${money(o.s.net, true)} · avg finish ${o.s.avgPlace.toFixed(1)}` + (w ? ` · ${w} win${w === 1 ? "" : "s"} in last 4` : o.s.seq.slice(-3).every(x => !x.cash) ? " · cold run" : "");
       return `<div class="odd ${i === 0 ? "fav" : ""}"><div><span class="pname plink" data-player="${esc(o.s.name)}" role="button" tabindex="0" title="Open player profile"><span class="chip" style="--c:${colors.get(o.s.name)}"></span>${esc(o.s.name)}${i === 0 ? ' <span class="pill hot">Fav</span>' : ""}</span><div class="why">${why}</div></div><span class="price">${o.price}</span></div>`;
     }).join("") || `<p class="small">Needs a few games first.</p>`;
   }
@@ -1052,6 +1087,8 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     const t = e.target.closest("button"); if (!t) return;
     if (t.dataset.period) { state.period = t.dataset.period; state.focus = null; try { localStorage.setItem("hg-period", state.period); } catch (x) {} return render(); }
     if (t.dataset.sort) { state.sort = t.dataset.sort; return render(); }
+    if (t.dataset.in) { const n = t.dataset.in; state.oddsIn = state.oddsIn.includes(n) ? state.oddsIn.filter(x => x !== n) : [...state.oddsIn, n]; return renderOdds(colorMap()); }
+    if (t.dataset.inReset) { state.oddsIn = null; return renderOdds(colorMap()); }
     if (t.dataset.focus !== undefined) { state.focus = state.focus === t.dataset.focus ? null : t.dataset.focus; return render(); }
   });
   document.addEventListener("change", e => {
