@@ -887,7 +887,10 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
 
   function renderH2H(colors) {
     const g = allGames();
-    const ranked = rankByNet(computeStats(g)).map(s => s.name);
+    const all = computeStats(g);
+    // Everyone can be picked; the defaults are the top two ranked players (3+ games)
+    const top = rankByNet(qualified(all, g)).map(s => s.name);
+    const ranked = [...top, ...rankByNet(all).map(s => s.name).filter(n => !top.includes(n))];
     if (ranked.length < 2) { $("h2h").innerHTML = `<p class="small">Needs at least two players.</p>`; return; }
     if (!ranked.includes(state.h2hA)) state.h2hA = ranked[0];
     if (!ranked.includes(state.h2hB) || state.h2hB === state.h2hA) state.h2hB = ranked.find(n => n !== state.h2hA);
