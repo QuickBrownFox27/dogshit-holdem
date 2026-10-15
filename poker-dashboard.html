@@ -756,12 +756,13 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
         if (e.net >= 0) s.cashes++;
         if (e.won > 0) s.payouts++;
         if (e.net > 0) s.profits++;
-        if (maxPlace > 1 && e.place === maxPlace && !e.shared) s.lasts++;
+        const soleLast = maxPlace > 1 && e.place === maxPlace && !e.shared;
+        if (soleLast) s.lasts++;
         s.rebuys += e.rebuys;
         if (bubblePlace !== null && e.won === 0 && e.place === bubblePlace && busted.filter(x => x.place === bubblePlace).length === 1) { s.bubbles++; s.bubbleGames.push(g.num); }
         s.places.push(e.place);
         s.pct.push(e.pct);
-        const x = { num: g.num, date: g.date, season: g.season, host: g.host, place: e.place, net: e.net, won: e.won, buyin: e.buyin, cash: e.net >= 0, field: g.field, shared: e.shared };
+        const x = { num: g.num, date: g.date, season: g.season, host: g.host, place: e.place, net: e.net, won: e.won, buyin: e.buyin, cash: e.net >= 0, field: g.field, shared: e.shared, soleLast };
         s.seq.push(x);
         if (!s.bestHaul || e.won > s.bestHaul.won) s.bestHaul = x;
         if (!s.bestNet || e.net > s.bestNet.net) s.bestNet = x;
@@ -1502,12 +1503,12 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   const PERSONAS = [
     { key: "rookie", uses: ["rookie"], ok: s => s.games < MIN_RANKED_GAMES && s.wins >= 1, rank: s => s.winRate,
       nick: () => "Patron Saint of Small Samples",
-      intro: s => `${s.games === 1 ? "One appearance. One win." : `${Nw(s.games, "appearance")}, ${nw(s.wins, "win")}.`} Already discussing the documentary. ${money(s.net, true)} and a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue until the sun burns out.`,
-      quote: "Honestly don't know what you blokes find so hard." },
+      intro: s => `${s.games === 1 ? "One appearance. One win." : `${Nw(s.games, "appearance")}, ${nw(s.wins, "win")}.`} Already discussing the fuckin' documentary. ${money(s.net, true)} and a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue until the sun burns out.`,
+      quote: "Honestly don't know what you blokes find so fuckin' hard." },
     { key: "ghost", uses: ["ghost"], ok: s => s.games < MIN_RANKED_GAMES && s.daysAway > 365, rank: s => s.daysAway,
       nick: () => "The League's Most Successful Missing Person",
       intro: s => `${s.games === 1 ? `Played game ${s.debut.num}, finished ${ord(s.debut.place)}, banked ${money(s.net, true)}` : `Played ${nw(s.games, "game")} for ${money(s.net, true)}`} and has not been sighted in ${s.daysAway} days. The only member of the league with a flawless exit strategy.`,
-      quote: "I'm still technically in the league." },
+      quote: "I'm still technically in the fuckin' league." },
     { key: "tourist", uses: ["small"], ok: s => s.games < MIN_RANKED_GAMES, rank: s => -s.games,
       nick: () => "The Visiting Dignitary",
       intro: s => `${Nw(s.games, "game")}, ${money(s.net, true)}. Has seen enough to form strong opinions and nowhere near enough to be held to them.`,
@@ -1515,27 +1516,31 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     { key: "landlord", uses: ["profit", "host"], ok: (s, c) => s.name === c.leader && s.net > 0, rank: s => s.net,
       nick: (s, c) => c.topHost === s.name ? "His Excellency the Landlord (and Venue)" : "His Excellency the Landlord",
       intro: (s, c) => { const yrs = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${cap(word(yrs))} year${yrs === 1 ? "" : "s"} of psychological warfare, ${nw(s.wins, "victory", "victories")} and an increasingly sophisticated analytics department. Financially: ${money(s.net, true)}, ${s.net < 600 ? "a decent weekend on Marketplace" : "roughly one second-hand jet ski"}.${c.topHost === s.name ? ` Also owns the venue, having hosted ${s.hostCount} of ${c.total} games, so the house edge is literal.` : ""}`; },
-      quote: "If you lot played properly I wouldn't have to keep taking your money." },
+      quote: "If you pricks played properly I wouldn't have to keep taking your fuckin' money." },
     { key: "benefactor", uses: ["loss"], ok: (s, c) => s.net < 0 && s.net === c.worstNet, rank: s => -s.net,
       nick: () => "The Minister for Unscheduled Donations",
-      intro: s => `An essential pillar of the league's funding model: ${money(-s.net)} contributed since ${s.debut.season}. Technically eligible to claim everyone else as dependants. ${s.wins === 0 ? "Zero wins, which at least keeps the paperwork simple." : s.wins === s.sharedWins ? `${Nw(s.wins, "win")}, and ${s.wins === 1 ? "even that was a bloody chop" : "every one of them chopped"}.` : `${Nw(s.wins, "win")}, purely to keep everyone's hopes up.`}`,
-      quote: "I'm not losing. I'm investing in the culture." },
+      intro: s => `An essential pillar of the league's funding model: ${money(-s.net)} contributed since ${s.debut.season}. Technically eligible to claim everyone else as dependants. ${s.wins === 0 ? "Zero wins, which at least keeps the paperwork simple." : s.wins === s.sharedWins ? `${Nw(s.wins, "win")}, and ${s.wins === 1 ? "even that was a fuckin' chop" : "every one of them chopped"}.` : `${Nw(s.wins, "win")}, purely to keep everyone's hopes up.`}`,
+      quote: "I'm not losing, I'm investing in the culture. Get fucked." },
+    { key: "switch", uses: ["lasts", "wins", "switch"], ok: s => s.games >= 6 && s.wins >= 2 && s.lasts >= 3 && (s.wins + s.lasts) / s.games >= .7, rank: s => (s.wins + s.lasts) / s.games,
+      nick: () => "The Human Light Switch",
+      intro: s => { return `Has exactly two settings: champion and couch. ${Nw(s.wins + s.lasts, "night")} out of ${s.games} have finished either first or dead last, and the middle of the table is treated like a fuckin' rumour${s.midGames.length ? ` (the only exceptions: ${s.midGames.length === 1 ? "game" : "games"} ${s.midGames.join(" and ")})` : ""}. ${Nw(s.wins, "win")}, ${nw(s.lasts, "last place")}, and nobody in the room, ${esc(s.name)} included, has the faintest idea which one is coming.`; },
+      quote: "I play to win, mate. Or to be home by ten. Fuckin' either's fine." },
     { key: "spoon", uses: ["lasts", "bubble"], ok: s => s.lasts >= 3, rank: s => s.lasts / s.games,
       nick: s => s.bubbles >= 3 ? "The Bubble's Emergency Contact" : "Head of Early Departures",
-      intro: s => `Doesn't play tight or loose. Plays briefly. ${cap(word(s.lasts))} dead-last finishes from ${s.games} games${s.bubbles >= 2 ? ` and ${word(s.bubbles)} more nights as first home with nothing` : ""}: a league record for being home before the bloody dishes are done.${s.wins ? ` Has also somehow won ${word(s.wins)}, which the maths department is still investigating.` : ""}`,
+      intro: s => `Doesn't play tight or loose. Plays briefly. ${cap(word(s.lasts))} dead-last finishes from ${s.games} games${s.bubbles >= 2 ? ` and ${word(s.bubbles)} more nights as first home with nothing` : ""}: a league record for being home before the fuckin' dishes are done.${s.wins ? ` Has also somehow won ${word(s.wins)}, which the maths department is still investigating.` : ""}`,
       quote: "I was card dead. For about four years." },
     { key: "second", uses: ["second"], ok: s => s.seconds >= 4 && s.seconds >= s.wins, rank: s => s.seconds,
       nick: () => "The Deputy Principal of Second Place",
-      intro: s => `Has spent so long in second place that mail now arrives there: ${word(s.seconds)} runner-up finishes from ${s.games}. ${s.net > 0 ? `Still ${money(s.net, true)} overall, the most second-place achievement imaginable.` : `Somehow still ${money(s.net, true)} overall, which takes real commitment.`}`,
-      quote: "Second's basically first if you think about it. I've thought about it a lot." },
+      intro: s => `Has spent so long in second place that the fuckin' mail goes there now: ${word(s.seconds)} runner-up finishes from ${s.games}. ${s.net > 0 ? `Still ${money(s.net, true)} overall, the most second-place achievement imaginable, and will tell you all about it at full volume with every adjective available.` : `Somehow still ${money(s.net, true)} overall, which takes real fuckin' commitment.`}`,
+      quote: "Second's basically fuckin' first, mate. Fuck off. I've done the maths." },
     { key: "apprentice", uses: ["small", "bigtable"], ok: s => s.games <= 4, rank: s => -s.games,
       nick: () => "The Work-Experience Kid With Tenure Ambitions",
       intro: s => `Statistically inconclusive. Personally insufferable. ${Nw(s.games, "game")}${s.seq.every(x => x.field >= 5) ? `, every one of them at a table of ${s.seq.every(x => x.field === s.seq[0].field) ? word(s.seq[0].field) : "five or more"}, because some people only perform in front of a crowd` : ""}.`,
-      quote: "Three games is plenty to know I'm the best here." },
+      quote: "Three games is plenty, mate. Best player in this fuckin' room." },
     { key: "messiah", uses: ["parttime"], ok: s => s.attend < .75 && s.wins >= 1, rank: s => s.winRate,
       nick: () => "The Part-Time Poker Messiah",
       intro: (s, c) => `Appears in ${s.games} of ${c.total} games, delivers ${word(s.wins)} miracle${s.wins === 1 ? "" : "s"}, then vanishes to let the disciples argue about it.${s.recent6 !== null && s.recent6 > 0 ? ` Lately running at ${money(s.recent6, true)} a game, and the faithful are getting ideas.` : ""}`,
-      quote: "I don't come every week because the game isn't ready for me every week." },
+      quote: "I don't come every week because you lot aren't fuckin' ready for me every week." },
     { key: "pokie", uses: [], ok: s => s.wins >= 2 && s.net < 0, rank: s => s.wins,
       nick: () => "The Human Pokie Machine",
       intro: s => `Pays out just often enough to keep everyone interested: ${nw(s.wins, "win")}, ${money(s.net, true)} overall. All flashing lights, terrible returns.`,
@@ -1570,7 +1575,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     { k: "payout", ok: s => s.bestHaul.won >= 150, w: s => s.bestHaul.won / 70, v: [
       s => `Once walked out with ${money(s.bestHaul.won)} (game ${s.bestHaul.num}) and has described that night to complete strangers ever since.`,
       s => `Collected ${money(s.bestHaul.won)} in game ${s.bestHaul.num}. Still has it framed, emotionally.`,
-      s => `Game ${s.bestHaul.num}: a ${money(s.bestHaul.won)} payout, since cited in every argument about anything.`,
+      s => `Game ${s.bestHaul.num}: a ${money(s.bestHaul.won)} payout, since cited in every bloody argument, including the ones about the footy.`,
       s => `Took ${money(s.bestHaul.won)} home from game ${s.bestHaul.num} and briefly looked into financial advisers.`] },
     { k: "owns", ok: s => !!s.rv.own, w: s => s.rv.own.d * .8, v: [
       s => `Finished ahead of ${esc(s.rv.own.p)} in ${s.rv.own.a} of ${s.rv.own.n} meetings. Has brought this up roughly ${s.rv.own.a * 10} times.`,
@@ -1591,40 +1596,45 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     { k: "bigtable", ok: s => s.games >= 3 && s.avgField >= 5.5, w: () => 2, v: [s => `Only turns up for the big nights: average table of ${s.avgField.toFixed(1)}. Doesn't get out of bed for a four-hander.`] },
     { k: "steady", ok: s => s.games >= 5 && avg(s.pct) < .45 && s.sd < .32, w: () => 1.8, v: [s => `Average finish ${s.avgPlace.toFixed(1)}. Finishes in the top half like it's written into the contract.`] },
     { k: "norebuy", ok: s => s.rebuys === 0 && s.games >= 8, w: () => 1, v: [() => "Has never once reloaded. Discipline, or a deep suspicion of the bank."] },
+    { k: "crowd", ok: s => { const b = s.seq.filter(x => x.field >= 5), m = s.seq.filter(x => x.field <= 4); return b.length >= 2 && m.length >= 2 && avg(b.map(x => x.net)) - avg(m.map(x => x.net)) >= 20; }, w: s => (avg(s.seq.filter(x => x.field >= 5).map(x => x.net)) - avg(s.seq.filter(x => x.field <= 4).map(x => x.net))) / 15, v: [
+      s => { const b = s.seq.filter(x => x.field >= 5), m = s.seq.filter(x => x.field <= 4); return `Shits the bed at a cosy table (${money(avg(m.map(x => x.net)), true)} a game with four or fewer) but goes ${money(avg(b.map(x => x.net)), true)} a game once five or more turn up. Needs a fuckin' audience.`; }] },
     { k: "chopwin", ok: s => s.sharedWins > 0 && s.wins > s.sharedWins, w: () => .8, v: [s => `Counts ${s.sharedWins === 1 ? "a chopped pot" : word(s.sharedWins) + " chopped pots"} as a full win and will not be taking questions.`] },
   ];
   // "Matters currently before the tribunal"
   const TRIBUNAL = [
     { k: "loss", ok: s => s.net < 0, w: s => -s.net / 45, v: [
-      s => `Down ${money(-s.net)} lifetime and still calls it "a bit of variance".`,
+      s => `Down ${money(-s.net)} lifetime and still calls it "a bit of fuckin' variance".`,
       (s, c) => { const y = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${money(-s.net)} in the red since ${s.debut.season}. Continues to describe a ${word(y)}-year direct debit as "a bit of variance".`; },
-      s => `Lifetime ${money(-s.net)} down. The bank calls it a loss; the player calls it tuition.`,
+      s => `Lifetime ${money(-s.net)} down. The bank calls it a loss; the player calls it fuckin' tuition.`,
       s => `Has donated ${money(-s.net)} to the cause. A tax receipt was requested and denied.`] },
     { k: "slump", ok: s => s.net > 0 && s.recent6 !== null && s.recent6 < 0 && s.recent6n >= 3, w: () => 3.5, v: [s => `Lifetime ${money(s.net, true)}, but ${money(s.recent6, true)} a game over the last six comp nights. The empire has entered its late Roman phase.`] },
     { k: "lasts", ok: s => s.lasts >= 2, w: s => s.lasts * .7, v: [
-      s => `${Nw(s.lasts, "dead-last finish", "dead-last finishes")}. First to the couch, first to the snacks.`,
+      s => `${Nw(s.lasts, "dead-last finish", "dead-last finishes")}. First to the couch, first to the snacks, first to say "fuckin' unbelievable".`,
       s => `${Nw(s.lasts, "dead-last finish", "dead-last finishes")}. Spends a lot of poker nights as a very well-informed spectator.`] },
     { k: "bubble", ok: s => s.bubbles >= 2, w: s => s.bubbles * .8, v: [
-      s => `First to go home with nothing ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). The bubble has the number saved.`,
+      s => `First to go home with nothing ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). The bubble has the number saved under "that poor bastard".`,
       s => `${Nw(s.bubbles, "time")} the first one out with nothing (games ${gl(s.bubbleGames)}). Knows exactly where the money stops, and stops there.`,
       s => `Busted first out of the money ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). On first-name terms with the bubble.`] },
     { k: "dry", ok: s => s.maxDry >= 3, w: s => s.maxDry * .7, v: [
-      s => `${Nw(s.maxDry, "straight night")} going home down (${fmtRuns(s.dryRuns.runs)}). Refers to this period as "rebuilding".`,
+      s => `${Nw(s.maxDry, "straight night")} going home down (${fmtRuns(s.dryRuns.runs)}). Refers to this period as "rebuilding". It was not fuckin' rebuilding.`,
       s => `${Nw(s.maxDry, "losing night")} in a row (${fmtRuns(s.dryRuns.runs)}). The good times were "just around the corner" for the entire stretch.`] },
     { k: "rebuy", ok: s => s.rebuys >= 1, w: s => s.rebuys * 1.3, v: [
-      s => `${Nw(s.rebuys, "estimated rebuy")}. Has mistaken the buy-in for a subscription service.`,
+      s => `${Nw(s.rebuys, "estimated rebuy")}. Has mistaken the buy-in for a fuckin' subscription service.`,
       s => `${Nw(s.rebuys, "estimated rebuy")}. Treats the buy-in as an opening offer.`] },
     { k: "nemesis", ok: s => !!s.rv.nem, w: (s, c) => s.rv.nem.d + (c.byName.get(s.rv.nem.p).wins === 0 ? 2 : 0), v: [
-      (s, c) => { const n = s.rv.nem; return `Has finished behind ${esc(n.p)} in ${n.b} of ${n.n} meetings${c.byName.get(n.p).wins === 0 ? `, and ${esc(n.p)} has never won a game` : ""}. Has a theory about why this doesn't count.`; },
-      s => { const n = s.rv.nem; return `Behind ${esc(n.p)} in ${n.b} of ${n.n} meetings. Now avoids eye contact at the snacks table.`; },
+      (s, c) => { const n = s.rv.nem; return `Has finished behind ${esc(n.p)} in ${n.b} of ${n.n} meetings${c.byName.get(n.p).wins === 0 ? `, and ${esc(n.p)} has never won a game` : ""}. Has a theory about why this doesn't count. The theory is shit.`; },
+      s => { const n = s.rv.nem; return `Behind ${esc(n.p)} in ${n.b} of ${n.n} meetings. Can't look the prick in the eye at the snacks table.`; },
       s => { const n = s.rv.nem; return `${esc(n.p)} has finished ahead in ${n.b} of ${n.n} meetings. Nobody is allowed to mention it in the group chat, so here it is.`; },
       s => { const n = s.rv.nem; return `Has lost the ${esc(n.p)} derby ${n.b} times in ${n.n}. Requesting a new venue, referee and opponent.`; }] },
+    { k: "swing", ok: s => s.seq.length >= 2 && s.swingMax.d >= 150, w: s => s.swingMax.d / 80, v: [
+      s => `Went ${money(s.swingMax.x.net, true)} in game ${s.swingMax.x.num} then ${money(s.swingMax.y.net, true)} in game ${s.swingMax.y.num}: a ${money(s.swingMax.d)} swing with no warning and no fuckin' explanation.`,
+      s => `${money(s.swingMax.x.net, true)} in game ${s.swingMax.x.num}, ${money(s.swingMax.y.net, true)} in game ${s.swingMax.y.num}. Bankroll management by Bunnings sausage-sizzle rules.`] },
     { k: "hangover", ok: s => s.afterWin.length >= 2 && avg(s.afterWin) < 0, w: s => -avg(s.afterWin) / 20, v: [s => `Averages ${money(avg(s.afterWin), true)} the night after a win. Celebrates like the trophy is permanent. It is not.`] },
     { k: "parttime", ok: (s, c) => s.games >= 3 && s.attend < .65, w: s => (1 - s.attend) * 3, v: [(s, c) => `Has played ${s.games} of ${c.total} games. Treats the league like a gym membership.`] },
     { k: "second", ok: s => s.seconds >= 3, w: s => s.seconds * .4, v: [s => `${Nw(s.seconds, "second place")}. Has never met a pot that couldn't almost be won.`] },
-    { k: "nowin", ok: s => s.wins === 0 && s.games >= 3, w: () => 3, v: [() => "Still hunting a first win. The search party has been stood down."] },
+    { k: "nowin", ok: s => s.wins === 0 && s.games >= 3, w: () => 3, v: [() => "Still hunting a first win. The search party has been stood the fuck down."] },
     { k: "tinynowin", ok: s => s.wins === 0 && s.games < 3, w: () => 3, v: [s => `${s.games === 1 ? "One game, zero wins" : `${Nw(s.games, "game")}, zero wins`}: technically a 100% failure rate.`] },
-    { k: "cold", ok: s => s.games >= 4 && s.recent6 !== null && s.recent6 <= -25, w: s => -s.recent6 / 15, v: [s => `${money(s.recent6, true)} a game over the last six comp nights. The form guide reads like a coroner's report.`] },
+    { k: "cold", ok: s => s.games >= 4 && s.recent6 !== null && s.recent6 <= -25, w: s => -s.recent6 / 15, v: [s => `${money(s.recent6, true)} a game over the last six comp nights. The form guide reads like a fuckin' coroner's report.`] },
     { k: "worst", ok: s => s.worstNet.net <= -100, w: () => 1.6, v: [s => `Game ${s.worstNet.num}: ${money(s.worstNet.net, true)} in one night, a loss with its own commemorative plaque.`] },
     { k: "evens", ok: s => s.evens >= 2, w: s => s.evens * 1.1, v: [s => `${Nw(s.evens, "night")} finishing exactly square. Has crossed Canberra to achieve the same financial outcome as staying home.`] },
     { k: "small", ok: s => s.games < MIN_RANKED_GAMES, w: () => 5, v: [s => `Sample size of a cocktail sausage: ${nw(s.games, "game")}. Statistically inconclusive, personally insufferable.`] },
@@ -1658,6 +1668,9 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       s.daysAway = dayDiff(s.lastSeen.date, today);
       s.avgField = avg(s.seq.map(x => x.field));
       s.winRate = s.wins / s.games;
+      s.midGames = s.seq.filter(x => x.place !== 1 && !x.soleLast).map(x => x.num);
+      s.swingMax = { d: 0 };
+      for (let i = 1; i < s.seq.length; i++) { const d = Math.abs(s.seq[i].net - s.seq[i - 1].net); if (d > s.swingMax.d) s.swingMax = { d, x: s.seq[i - 1], y: s.seq[i] }; }
     });
     const persona = new Map(), free = new Set(stats.map(s => s.name));
     PERSONAS.forEach(P => {
