@@ -23,6 +23,7 @@
   --gain-bg: #dcebd9;
   --loss-bg: #f3d9d2;
   --win-bg: #f1dc9a;
+  --lead-row: #f3e7c2; /* win-bg softened onto the card; solid so frozen cells stay opaque */
   --f-display: "Limelight", "Didot", Georgia, serif;
   --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
@@ -165,11 +166,16 @@ table.board { width: 100%; border-collapse: collapse; min-width: 780px; }
 .board th[aria-sort] button { color: var(--ink); }
 .board td { padding: 10px 10px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 .board tr:last-child td { border-bottom: 0; }
-.board .rank { font-family: var(--f-mono); color: var(--ink-soft); width: 34px; }
+.board .rank { font-family: var(--f-mono); color: var(--ink-soft); width: 38px; min-width: 38px; }
+/* Freeze names: rank and player stay put while the stats scroll sideways */
+.board.frozen th.rank, .board.frozen td.rank { position: sticky; left: 0; z-index: 2; background: var(--card); }
+.board.frozen th.pcol, .board.frozen td.pcol { position: sticky; left: 38px; z-index: 2; background: var(--card); box-shadow: 8px 0 8px -8px rgba(31, 27, 22, .35); }
+.board.frozen tr.first td.rank, .board.frozen tr.first td.pcol { background: var(--lead-row); }
+.board.frozen tr.unranked-h td span { position: sticky; left: 10px; }
 .board tr.unranked-h td { padding: 14px 10px 6px; text-align: left; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; border-bottom: 1px dashed var(--rule); }
 .board tr.unranked td { color: var(--ink-soft); }
 .board tr.unranked .move { color: var(--ink-soft); }
-.board tr.first td { background: linear-gradient(90deg, var(--win-bg), transparent 70%); }
+.board tr.first td { background: var(--lead-row); }
 .board sup { color: var(--gold-deep); font-weight: 700; }
 .pname { display: inline-flex; gap: 9px; align-items: center; font-weight: 600; }
 .chip { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 2px dashed rgba(255,255,255,.85); box-shadow: 0 0 0 2px var(--c); background: var(--c); }
@@ -497,7 +503,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   <section class="tiles" id="overview" aria-label="Headline numbers"></section>
 
   <section class="panel" id="ledger" aria-labelledby="boardH">
-    <div class="panel-h"><div class="ttl"><h2 id="boardH">The Ledger</h2><span class="scope filtered" id="ledgerScope"></span></div><span class="hint">Tap a player for their career profile.</span></div>
+    <div class="panel-h"><div class="ttl"><h2 id="boardH">The Ledger</h2><span class="scope filtered" id="ledgerScope"></span></div><div class="actions"><span class="hint">Tap a player for their career profile.</span><label class="check"><input type="checkbox" id="freezeNames"> Freeze names</label></div></div>
     <p class="lede" id="ledgerLede"></p>
     <div class="tablewrap" id="board"></div>
   </section>
@@ -680,13 +686,14 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     f: { ...F0 }, sort: "net", focus: null, oddsIn: null,
     h2hA: null, h2hB: null, h2hPicked: false, h2hAll: false,
     labPlayer: PLAYERS.includes("Wendell") ? "Wendell" : (PLAYERS[0] || null), labResult: "all", labMode: "cum", labSort: { k: "num", dir: -1 },
-    logOrder: "new", logPhotos: true, logQuery: "",
+    logOrder: "new", logPhotos: true, logQuery: "", freeze: true,
   };
   try {
     const s = JSON.parse(localStorage.getItem(STORE) || "{}");
     if (s.f) view.f = { ...F0, ...s.f };
     ["sort", "labResult", "labMode", "logOrder"].forEach(k => { if (typeof s[k] === "string") view[k] = s[k]; });
     if (typeof s.logPhotos === "boolean") view.logPhotos = s.logPhotos;
+    if (typeof s.freeze === "boolean") view.freeze = s.freeze;
     if (s.labPlayer && PLAYERS.includes(s.labPlayer)) view.labPlayer = s.labPlayer;
     if (s.labSort && s.labSort.k) view.labSort = s.labSort;
   } catch (e) {}
@@ -696,7 +703,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   if (view.f.featuring && !PLAYERS.includes(view.f.featuring)) view.f.featuring = "";
   if (!["", "small", "big"].includes(view.f.table)) view.f.table = "";
   function save() {
-    try { localStorage.setItem(STORE, JSON.stringify({ f: view.f, sort: view.sort, labPlayer: view.labPlayer, labResult: view.labResult, labMode: view.labMode, labSort: view.labSort, logOrder: view.logOrder, logPhotos: view.logPhotos })); } catch (e) {}
+    try { localStorage.setItem(STORE, JSON.stringify({ f: view.f, sort: view.sort, labPlayer: view.labPlayer, labResult: view.labResult, labMode: view.labMode, labSort: view.labSort, logOrder: view.logOrder, logPhotos: view.logPhotos, freeze: view.freeze })); } catch (e) {}
   }
 
   /* ---------- filters ---------- */
@@ -907,11 +914,12 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     const lastGame = G.at(-1);
     const recent = G.slice(-5).reverse();
     const anyShared = stats.some(s => s.sharedWins);
+    $("freezeNames").checked = view.freeze;
     $("ledgerLede").innerHTML = `Everyone who played in the ${plural(G.length, "selected game")}. Ranks need ${MIN_RANKED_GAMES} career games as of game ${lastGame.num} (${esc(fmtDate(lastGame.date))}). Recovered = net $0 or better.`;
     const th = (k, label, title) => `<th ${view.sort === k ? 'aria-sort="descending"' : ""} ${title ? `title="${title}"` : ""}><button type="button" data-sort="${k}">${label}${view.sort === k ? " ↓" : ""}</button></th>`;
-    $("board").innerHTML = `<table class="board"><thead><tr><th class="l">#</th><th class="l">Player</th>${th("net", "Profit")}${th("games", "Games")}${th("wins", "Wins", "First places, including chops")}${th("cash", "Recovered", "Nights with a net result of $0 or better")}${th("roi", "ROI", "Net profit ÷ total buy-ins")}${th("avgp", "Avg finish")}${th("best", "Best night", "Highest net profit in one game")}<th class="l" title="The last 5 selected games, newest on the left. Blank = didn't play.">Last 5 games<br><span class="form fh">${recent.map(g => `<span class="f h">G${g.num}</span>`).join("")}</span></th><th class="l">Streak</th></tr></thead><tbody>${rows.map((s, idx) => {
+    $("board").innerHTML = `<table class="board ${view.freeze ? "frozen" : ""}"><thead><tr><th class="l rank">#</th><th class="l pcol">Player</th>${th("net", "Profit")}${th("games", "Games")}${th("wins", "Wins", "First places, including chops")}${th("cash", "Recovered", "Nights with a net result of $0 or better")}${th("roi", "ROI", "Net profit ÷ total buy-ins")}${th("avgp", "Avg finish")}${th("best", "Best night", "Highest net profit in one game")}<th class="l" title="The last 5 selected games, newest on the left. Blank = didn't play.">Last 5 games<br><span class="form fh">${recent.map(g => `<span class="f h">G${g.num}</span>`).join("")}</span></th><th class="l">Streak</th></tr></thead><tbody>${rows.map((s, idx) => {
       const r = netRank.has(s.name) ? netRank.get(s.name) : null;
-      const divider = idx === ranked.length ? `<tr class="unranked-h"><td colspan="11">Not ranked yet · ${MIN_RANKED_GAMES} career games needed for a place</td></tr>` : "";
+      const divider = idx === ranked.length ? `<tr class="unranked-h"><td colspan="11"><span>Not ranked yet · ${MIN_RANKED_GAMES} career games needed for a place</span></td></tr>` : "";
       let mv = "";
       if (r === null) { const left = MIN_RANKED_GAMES - careerGames(s.name, G); mv = `<span class="move" title="${plural(left, "more game")} to be ranked">${left} to go</span>`; }
       else if (prevRank.has(s.name) && lastGame.entries.some(e => e.p === s.name)) {
@@ -921,7 +929,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       } else if (!prevRank.has(s.name) && G.length > 1) mv = `<span class="move up" title="Newly ranked in this view">new</span>`;
       const formHtml = recent.map(g => formBox(s.seq.find(q => q.num === g.num), g.num)).join("");
       const st = s.streak.n >= 2 ? `<span class="pill ${s.streak.cash ? "hot" : "cold"}" title="${s.streak.cash ? "Recovered the buy-in" : "Went home down"} in each of the last ${s.streak.n} games they played here">${s.streak.cash ? "Hot" : "Cold"} ×${s.streak.n}</span>` : `<span class="small">–</span>`;
-      return divider + `<tr class="${r === 0 ? "first" : r === null ? "unranked" : ""}"><td class="rank l">${r === null ? "–" : r + 1}</td><td class="l">${pname(s.name)}${mv}</td><td class="num netcell ${cls(s.net)}">${money(s.net, true)}</td><td class="num">${s.games}</td><td class="num">${s.wins}${s.sharedWins ? `<sup title="${s.sharedWins} shared">*</sup>` : ""}</td><td class="num">${s.cashes}/${s.games}<span class="bar"><i style="width:${s.cashPct * 100}%"></i></span></td><td class="num ${cls(s.roi)}">${pctTxt(s.roi, true)}</td><td class="num">${s.avgPlace.toFixed(1)}</td><td class="num ${cls(s.bestNet.net)}" title="Game ${s.bestNet.num}">${money(s.bestNet.net, true)}</td><td class="l"><span class="form">${formHtml}</span></td><td class="l">${st}</td></tr>`;
+      return divider + `<tr class="${r === 0 ? "first" : r === null ? "unranked" : ""}"><td class="rank l">${r === null ? "–" : r + 1}</td><td class="l pcol">${pname(s.name)}${mv}</td><td class="num netcell ${cls(s.net)}">${money(s.net, true)}</td><td class="num">${s.games}</td><td class="num">${s.wins}${s.sharedWins ? `<sup title="${s.sharedWins} shared">*</sup>` : ""}</td><td class="num">${s.cashes}/${s.games}<span class="bar"><i style="width:${s.cashPct * 100}%"></i></span></td><td class="num ${cls(s.roi)}">${pctTxt(s.roi, true)}</td><td class="num">${s.avgPlace.toFixed(1)}</td><td class="num ${cls(s.bestNet.net)}" title="Game ${s.bestNet.num}">${money(s.bestNet.net, true)}</td><td class="l"><span class="form">${formHtml}</span></td><td class="l">${st}</td></tr>`;
     }).join("")}</tbody></table>
       <div class="formkey" aria-label="Key for the Last 5 games boxes"><span class="small">Last 5 games:</span>
         <span><span class="f w">1</span> Won</span>
@@ -1884,6 +1892,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (t.id === "h2hB") { view.h2hB = t.value; view.h2hPicked = true; if (view.h2hB === view.h2hA) view.h2hA = PLAYERS.find(n => n !== view.h2hB); return renderH2H(); }
     if (t.id === "h2hAll") { view.h2hAll = t.checked; return renderH2H(); }
     if (t.id === "logPhotos") { view.logPhotos = t.checked; save(); return renderLog(); }
+    if (t.id === "freezeNames") { view.freeze = t.checked; save(); return renderBoard(); }
   }
   let searchTimer = null;
   $("logSearch").addEventListener("input", e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { view.logQuery = e.target.value; renderLog(); }, 120); });
