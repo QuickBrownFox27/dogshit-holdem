@@ -382,6 +382,13 @@ button.brow:hover { background: var(--card-2); }
 .pf-facts dd { margin: 0; }
 .pf-quote { font-family: var(--f-display); font-size: 20px; line-height: 1.25; border-left: 3px solid var(--gold); padding-left: 12px; }
 .pf-quote small { display: block; font-family: var(--f-body); font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+.pf-intro { font-size: 16px; line-height: 1.5; border-left: 3px solid var(--ink); padding-left: 12px; }
+.pf-quote small.pf-would { margin: 0 0 2px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--gold-deep); }
+.pf-notes { background: var(--paper); border: 1px dashed var(--gold); border-radius: 10px; padding: 10px 12px; }
+.pf-notes h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 4px; }
+.pf-notes ul { margin: 0; padding-left: 18px; font-size: 14px; }
+.pf-receipts { display: grid; gap: 10px; border-top: 2px solid var(--ink); padding-top: 12px; }
+.pf-receipts h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .modal.gamebox { width: min(760px, 100%); }
 .gm-sub { color: var(--ink-soft); font-size: 14px; margin-top: 2px; }
 .gm-photo { display: block; border-radius: 10px; overflow: hidden; background: #fff; border: 4px solid #fff; box-shadow: 0 4px 14px rgba(0,0,0,.18); justify-self: center; max-width: 100%; }
@@ -1124,7 +1131,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     $("labCsv").disabled = true;
     if (!name) { body.innerHTML = `<p class="small">No players yet.</p>`; return; }
     const meta = META[name] || {};
-    const T = assignTitles(allStats, GAMES.length).get(name) || WILDCARD;
+    const T = { t: nickFor(name) };
     const face = meta.photo ? `<span class="lab-face" style="--c:${COLOURS.get(name)}"><img src="${esc(meta.photo)}" alt=""></span>` : `<span class="lab-face" style="--c:${COLOURS.get(name)}"></span>`;
     const head = `<div class="lab-id">${face}<div><div class="t">${T.t}</div><h3>${esc(name)}</h3><div class="lab-scope" id="labScopeLine"></div></div></div>`;
     if (!G.length) { body.innerHTML = head + emptyBox("No games match", "The global filters leave nothing to analyse."); $("labScopeLine").textContent = "0 matching games"; return; }
@@ -1465,30 +1472,11 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (open && modalReturn && modalReturn.focus && document.contains(modalReturn)) modalReturn.focus();
   }
 
-  /* ---------- career profiles (full history) ---------- */
-  const TITLES = [
-    { t: "The Landlord", tag: "Everyone else just rents a seat.", quote: "I'm not saying I'm good. I'm saying check the ledger.", ok: s => s.net > 0, rank: s => s.net },
-    { t: "Patron of the Arts", tag: "Generously funds everyone else's night out.", quote: "It's a long game, mate.", ok: s => s.net < 0, rank: s => -s.net },
-    { t: "The Early Shower", tag: "First to the couch, most nights.", quote: "I had a read. The read was wrong.", ok: s => s.lasts >= 3, rank: s => s.lasts / s.games },
-    { t: "The Closer", tag: "Doesn't care about second.", quote: "Second is just the first loser.", ok: s => s.wins >= 3 && s.wins / s.games >= .25, rank: s => s.wins / s.games },
-    { t: "The Grinder", tag: "Never pretty, rarely broke.", quote: "A cash is a cash.", ok: s => s.games >= 5 && s.cashPct >= .5, rank: s => s.cashPct },
-    { t: "Bubble Boy", tag: "Knows exactly where the money stops.", quote: "So. Close.", ok: s => s.bubbles >= 2, rank: s => s.bubbles },
-    { t: "The Rookie Sensation", tag: "Turned up, won, now thinks this game is easy.", quote: "Is it always this easy?", ok: s => s.games < 3 && s.wins >= 1, rank: s => s.wins },
-    { t: "The Tourist", tag: "Popped in, had a look around, left.", quote: "Which one's the button again?", ok: s => s.games < 3, rank: s => -s.games },
-    { t: "The Apprentice", tag: "Still working out which chips are which.", quote: "Two pair beats a flush, right?", ok: s => s.games <= 4, rank: s => -s.games },
-    { t: "The Boom-or-Bust Merchant", tag: "Wins big, then gives it all back.", quote: "All in. Obviously.", ok: s => s.wins >= 2 && s.net < 0, rank: s => s.wins },
-    { t: "The Furniture", tag: "Part of the fixtures and fittings.", quote: "Same seat as always.", ok: (s, total) => s.games / total >= .8, rank: s => s.games },
-  ];
-  const WILDCARD = { t: "The Wildcard", tag: "Nobody knows what's coming. Including them.", quote: "You can't force dogshit." };
-  function assignTitles(stats, total) {
-    const map = new Map(), free = new Set(stats.map(s => s.name));
-    TITLES.forEach(T => {
-      const c = stats.filter(s => free.has(s.name) && T.ok(s, total)).sort((a, b) => T.rank(b) - T.rank(a));
-      if (c.length) { map.set(c[0].name, T); free.delete(c[0].name); }
-    });
-    free.forEach(n => map.set(n, WILDCARD));
-    return map;
-  }
+  /* ---------- career profiles: the roast (generated from the full record, so it stays true after updates) ---------- */
+  const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+  const word = n => n >= 0 && n < WORDS.length ? WORDS[n] : String(n);
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
   // Nemesis: the player they finish behind most (net). Owns: the one they finish ahead of most. Min 3 shared games.
   function rivals(name) {
     const r = {};
@@ -1509,76 +1497,237 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     });
     return { nem, own };
   }
+
+  // One persona per player, chosen in this order: each goes to the best-matching player not yet given one.
+  const PERSONAS = [
+    { key: "rookie", uses: ["rookie"], ok: s => s.games < MIN_RANKED_GAMES && s.wins >= 1, rank: s => s.winRate,
+      nick: () => "Patron Saint of Small Samples",
+      intro: s => `${s.games === 1 ? "One appearance. One win." : `${Nw(s.games, "appearance")}, ${nw(s.wins, "win")}.`} Already discussing the documentary. ${money(s.net, true)} and a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue until the sun burns out.`,
+      quote: "Honestly don't know what you blokes find so hard." },
+    { key: "ghost", uses: ["ghost"], ok: s => s.games < MIN_RANKED_GAMES && s.daysAway > 365, rank: s => s.daysAway,
+      nick: () => "The League's Most Successful Missing Person",
+      intro: s => `${s.games === 1 ? `Played game ${s.debut.num}, finished ${ord(s.debut.place)}, banked ${money(s.net, true)}` : `Played ${nw(s.games, "game")} for ${money(s.net, true)}`} and has not been sighted in ${s.daysAway} days. The only member of the league with a flawless exit strategy.`,
+      quote: "I'm still technically in the league." },
+    { key: "tourist", uses: ["small"], ok: s => s.games < MIN_RANKED_GAMES, rank: s => -s.games,
+      nick: () => "The Visiting Dignitary",
+      intro: s => `${Nw(s.games, "game")}, ${money(s.net, true)}. Has seen enough to form strong opinions and nowhere near enough to be held to them.`,
+      quote: "I'll come more when it's on a better night." },
+    { key: "landlord", uses: ["profit", "host"], ok: (s, c) => s.name === c.leader && s.net > 0, rank: s => s.net,
+      nick: (s, c) => c.topHost === s.name ? "His Excellency the Landlord (and Venue)" : "His Excellency the Landlord",
+      intro: (s, c) => { const yrs = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${cap(word(yrs))} year${yrs === 1 ? "" : "s"} of psychological warfare, ${nw(s.wins, "victory", "victories")} and an increasingly sophisticated analytics department. Financially: ${money(s.net, true)}, ${s.net < 600 ? "a decent weekend on Marketplace" : "roughly one second-hand jet ski"}.${c.topHost === s.name ? ` Also owns the venue, having hosted ${s.hostCount} of ${c.total} games, so the house edge is literal.` : ""}`; },
+      quote: "If you lot played properly I wouldn't have to keep taking your money." },
+    { key: "benefactor", uses: ["loss"], ok: (s, c) => s.net < 0 && s.net === c.worstNet, rank: s => -s.net,
+      nick: () => "The Minister for Unscheduled Donations",
+      intro: s => `An essential pillar of the league's funding model: ${money(-s.net)} contributed since ${s.debut.season}. Technically eligible to claim everyone else as dependants. ${s.wins === 0 ? "Zero wins, which at least keeps the paperwork simple." : s.wins === s.sharedWins ? `${Nw(s.wins, "win")}, and ${s.wins === 1 ? "even that was a bloody chop" : "every one of them chopped"}.` : `${Nw(s.wins, "win")}, purely to keep everyone's hopes up.`}`,
+      quote: "I'm not losing. I'm investing in the culture." },
+    { key: "spoon", uses: ["lasts", "bubble"], ok: s => s.lasts >= 3, rank: s => s.lasts / s.games,
+      nick: s => s.bubbles >= 3 ? "The Bubble's Emergency Contact" : "Head of Early Departures",
+      intro: s => `Doesn't play tight or loose. Plays briefly. ${cap(word(s.lasts))} dead-last finishes from ${s.games} games${s.bubbles >= 2 ? ` and ${word(s.bubbles)} more nights as first home with nothing` : ""}: a league record for being home before the bloody dishes are done.${s.wins ? ` Has also somehow won ${word(s.wins)}, which the maths department is still investigating.` : ""}`,
+      quote: "I was card dead. For about four years." },
+    { key: "second", uses: ["second"], ok: s => s.seconds >= 4 && s.seconds >= s.wins, rank: s => s.seconds,
+      nick: () => "The Deputy Principal of Second Place",
+      intro: s => `Has spent so long in second place that mail now arrives there: ${word(s.seconds)} runner-up finishes from ${s.games}. ${s.net > 0 ? `Still ${money(s.net, true)} overall, the most second-place achievement imaginable.` : `Somehow still ${money(s.net, true)} overall, which takes real commitment.`}`,
+      quote: "Second's basically first if you think about it. I've thought about it a lot." },
+    { key: "apprentice", uses: ["small", "bigtable"], ok: s => s.games <= 4, rank: s => -s.games,
+      nick: () => "The Work-Experience Kid With Tenure Ambitions",
+      intro: s => `Statistically inconclusive. Personally insufferable. ${Nw(s.games, "game")}${s.seq.every(x => x.field >= 5) ? `, every one of them at a table of ${s.seq.every(x => x.field === s.seq[0].field) ? word(s.seq[0].field) : "five or more"}, because some people only perform in front of a crowd` : ""}.`,
+      quote: "Three games is plenty to know I'm the best here." },
+    { key: "messiah", uses: ["parttime"], ok: s => s.attend < .75 && s.wins >= 1, rank: s => s.winRate,
+      nick: () => "The Part-Time Poker Messiah",
+      intro: (s, c) => `Appears in ${s.games} of ${c.total} games, delivers ${word(s.wins)} miracle${s.wins === 1 ? "" : "s"}, then vanishes to let the disciples argue about it.${s.recent6 !== null && s.recent6 > 0 ? ` Lately running at ${money(s.recent6, true)} a game, and the faithful are getting ideas.` : ""}`,
+      quote: "I don't come every week because the game isn't ready for me every week." },
+    { key: "pokie", uses: [], ok: s => s.wins >= 2 && s.net < 0, rank: s => s.wins,
+      nick: () => "The Human Pokie Machine",
+      intro: s => `Pays out just often enough to keep everyone interested: ${nw(s.wins, "win")}, ${money(s.net, true)} overall. All flashing lights, terrible returns.`,
+      quote: "All in. Obviously." },
+    { key: "sedan", uses: ["recovered"], ok: s => s.games >= 5 && s.cashPct >= .5, rank: s => s.cashPct,
+      nick: () => "The Sensible Sedan",
+      intro: s => `Gets the buy-in back ${Math.round(s.cashPct * 100)}% of the time. Reliable, beige and impossible to get excited about.`,
+      quote: "A cash is a cash." },
+    { key: "furniture", uses: ["attend"], ok: (s, c) => s.attend >= .8, rank: s => s.games,
+      nick: () => "Load-Bearing Furniture",
+      intro: (s, c) => `Has attended more reliably than some of the furniture: ${s.games} of ${c.total} games.${s.net < 0 ? " The furniture has lost less." : ""}`,
+      quote: "Same seat as always." },
+  ];
+  const WILDCARD = { key: "wild", uses: [], nick: () => "The Unregistered Wildcard", intro: s => `${Nw(s.games, "game")}, ${money(s.net, true)} and no discernible pattern. Even the spreadsheet looks nervous.`, quote: "You can't force dogshit." };
+
+  // Count words for small numbers ("six wins", not "6 wins")
+  const nw = (n, noun, pl) => `${word(n)} ${n === 1 ? noun : (pl || noun + "s")}`;
+  const Nw = (n, noun, pl) => cap(nw(n, noun, pl));
+  const gl = list => list.join(", ");
+
+  // "Alleged strengths": each line only appears when the record supports it; the most notable come first.
+  // Lines with several wordings hand them out in turn, so no two players get the same joke.
+  const ALLEGED = [
+    { k: "profit", ok: s => s.net > 0, w: s => s.net / 40, v: [
+      s => `Genuinely up ${money(s.net, true)} lifetime, which in this company qualifies as a financial adviser.`,
+      s => `Actually in profit (${money(s.net, true)}). Considers this a personality trait.`,
+      s => `${money(s.net, true)} lifetime. Walks in like the house, and the house is doing fine.`] },
+    { k: "wins", ok: (s, c) => s.games >= 3 && s.winRate > 1.2 / c.fieldAvg, w: (s, c) => (s.winRate * c.fieldAvg - 1) * 4, v: [
+      s => `${Nw(s.wins, "win")} from ${s.games}. Agrees poker is mostly luck, except when discussing these results.`,
+      s => `${Nw(s.wins, "win")} from ${s.games}, each one reviewed in slow motion at the following game.`,
+      s => `${Nw(s.wins, "win")} from ${s.games}. Has a celebration, and isn't afraid to use it.`] },
+    { k: "payout", ok: s => s.bestHaul.won >= 150, w: s => s.bestHaul.won / 70, v: [
+      s => `Once walked out with ${money(s.bestHaul.won)} (game ${s.bestHaul.num}) and has described that night to complete strangers ever since.`,
+      s => `Collected ${money(s.bestHaul.won)} in game ${s.bestHaul.num}. Still has it framed, emotionally.`,
+      s => `Game ${s.bestHaul.num}: a ${money(s.bestHaul.won)} payout, since cited in every argument about anything.`,
+      s => `Took ${money(s.bestHaul.won)} home from game ${s.bestHaul.num} and briefly looked into financial advisers.`] },
+    { k: "owns", ok: s => !!s.rv.own, w: s => s.rv.own.d * .8, v: [
+      s => `Finished ahead of ${esc(s.rv.own.p)} in ${s.rv.own.a} of ${s.rv.own.n} meetings. Has brought this up roughly ${s.rv.own.a * 10} times.`,
+      s => `Owns ${esc(s.rv.own.p)} outright: ahead in ${s.rv.own.a} of ${s.rv.own.n} meetings. Considering naming a grandstand after it.`,
+      s => `Ahead of ${esc(s.rv.own.p)} in ${s.rv.own.a} of ${s.rv.own.n} meetings, a rivalry in the sense that a windscreen and a moth are rivals.`,
+      s => `Finished above ${esc(s.rv.own.p)} ${nw(s.rv.own.a, "time")} in ${s.rv.own.n} meetings and now refers to ${esc(s.rv.own.p)} as "my client".`,
+      s => `Has ${esc(s.rv.own.p)} on a lanyard: ahead in ${s.rv.own.a} of ${s.rv.own.n} meetings, every one of them mentioned in the group chat.`] },
+    { k: "kryptonite", ok: (s, c) => c.leader && s.name !== c.leader && (c.byName.get(c.leader).rv.nem || {}).p === s.name, w: () => 4, v: [
+      (s, c) => { const n = c.byName.get(c.leader).rv.nem; return `Has finished ahead of ${esc(c.leader)}, the league leader, in ${n.b} of ${n.n} meetings. A genuine diplomatic incident.`; }] },
+    { k: "host", ok: s => s.hostCount >= 2, w: s => s.hostCount / 3, v: [(s, c) => `Has hosted ${s.hostCount} of ${c.total} games, so the home-ground advantage includes the fridge.`] },
+    { k: "recovered", ok: s => s.games >= 5 && s.cashPct >= .6, w: s => s.cashPct * 3, v: [s => `Gets the buy-in back ${Math.round(s.cashPct * 100)}% of the time: the sensible sedan of the felt.`] },
+    { k: "neverdown", ok: s => s.seq.every(x => x.net >= 0), w: () => 3, v: [
+      s => `Has never once gone home down${s.games <= 2 ? ", a perfect record built on barely turning up" : ""}.`,
+      s => `Undefeated in the sense that matters: ${s.games <= 2 ? "has never stayed long enough to lose money" : "has never once gone home down"}.`] },
+    { k: "hot", ok: s => s.games >= 4 && s.recent6 !== null && s.recent6 > 10, w: s => s.recent6 / 12, v: [
+      s => `${money(s.recent6, true)} a game across the last six comp nights, and treating it like prophecy.`,
+      s => `Lately ${money(s.recent6, true)} a game: momentum, according to them; a small sample, according to the maths.`] },
+    { k: "bigtable", ok: s => s.games >= 3 && s.avgField >= 5.5, w: () => 2, v: [s => `Only turns up for the big nights: average table of ${s.avgField.toFixed(1)}. Doesn't get out of bed for a four-hander.`] },
+    { k: "steady", ok: s => s.games >= 5 && avg(s.pct) < .45 && s.sd < .32, w: () => 1.8, v: [s => `Average finish ${s.avgPlace.toFixed(1)}. Finishes in the top half like it's written into the contract.`] },
+    { k: "norebuy", ok: s => s.rebuys === 0 && s.games >= 8, w: () => 1, v: [() => "Has never once reloaded. Discipline, or a deep suspicion of the bank."] },
+    { k: "chopwin", ok: s => s.sharedWins > 0 && s.wins > s.sharedWins, w: () => .8, v: [s => `Counts ${s.sharedWins === 1 ? "a chopped pot" : word(s.sharedWins) + " chopped pots"} as a full win and will not be taking questions.`] },
+  ];
+  // "Matters currently before the tribunal"
+  const TRIBUNAL = [
+    { k: "loss", ok: s => s.net < 0, w: s => -s.net / 45, v: [
+      s => `Down ${money(-s.net)} lifetime and still calls it "a bit of variance".`,
+      (s, c) => { const y = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${money(-s.net)} in the red since ${s.debut.season}. Continues to describe a ${word(y)}-year direct debit as "a bit of variance".`; },
+      s => `Lifetime ${money(-s.net)} down. The bank calls it a loss; the player calls it tuition.`,
+      s => `Has donated ${money(-s.net)} to the cause. A tax receipt was requested and denied.`] },
+    { k: "slump", ok: s => s.net > 0 && s.recent6 !== null && s.recent6 < 0 && s.recent6n >= 3, w: () => 3.5, v: [s => `Lifetime ${money(s.net, true)}, but ${money(s.recent6, true)} a game over the last six comp nights. The empire has entered its late Roman phase.`] },
+    { k: "lasts", ok: s => s.lasts >= 2, w: s => s.lasts * .7, v: [
+      s => `${Nw(s.lasts, "dead-last finish", "dead-last finishes")}. First to the couch, first to the snacks.`,
+      s => `${Nw(s.lasts, "dead-last finish", "dead-last finishes")}. Spends a lot of poker nights as a very well-informed spectator.`] },
+    { k: "bubble", ok: s => s.bubbles >= 2, w: s => s.bubbles * .8, v: [
+      s => `First to go home with nothing ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). The bubble has the number saved.`,
+      s => `${Nw(s.bubbles, "time")} the first one out with nothing (games ${gl(s.bubbleGames)}). Knows exactly where the money stops, and stops there.`,
+      s => `Busted first out of the money ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). On first-name terms with the bubble.`] },
+    { k: "dry", ok: s => s.maxDry >= 3, w: s => s.maxDry * .7, v: [
+      s => `${Nw(s.maxDry, "straight night")} going home down (${fmtRuns(s.dryRuns.runs)}). Refers to this period as "rebuilding".`,
+      s => `${Nw(s.maxDry, "losing night")} in a row (${fmtRuns(s.dryRuns.runs)}). The good times were "just around the corner" for the entire stretch.`] },
+    { k: "rebuy", ok: s => s.rebuys >= 1, w: s => s.rebuys * 1.3, v: [
+      s => `${Nw(s.rebuys, "estimated rebuy")}. Has mistaken the buy-in for a subscription service.`,
+      s => `${Nw(s.rebuys, "estimated rebuy")}. Treats the buy-in as an opening offer.`] },
+    { k: "nemesis", ok: s => !!s.rv.nem, w: (s, c) => s.rv.nem.d + (c.byName.get(s.rv.nem.p).wins === 0 ? 2 : 0), v: [
+      (s, c) => { const n = s.rv.nem; return `Has finished behind ${esc(n.p)} in ${n.b} of ${n.n} meetings${c.byName.get(n.p).wins === 0 ? `, and ${esc(n.p)} has never won a game` : ""}. Has a theory about why this doesn't count.`; },
+      s => { const n = s.rv.nem; return `Behind ${esc(n.p)} in ${n.b} of ${n.n} meetings. Now avoids eye contact at the snacks table.`; },
+      s => { const n = s.rv.nem; return `${esc(n.p)} has finished ahead in ${n.b} of ${n.n} meetings. Nobody is allowed to mention it in the group chat, so here it is.`; },
+      s => { const n = s.rv.nem; return `Has lost the ${esc(n.p)} derby ${n.b} times in ${n.n}. Requesting a new venue, referee and opponent.`; }] },
+    { k: "hangover", ok: s => s.afterWin.length >= 2 && avg(s.afterWin) < 0, w: s => -avg(s.afterWin) / 20, v: [s => `Averages ${money(avg(s.afterWin), true)} the night after a win. Celebrates like the trophy is permanent. It is not.`] },
+    { k: "parttime", ok: (s, c) => s.games >= 3 && s.attend < .65, w: s => (1 - s.attend) * 3, v: [(s, c) => `Has played ${s.games} of ${c.total} games. Treats the league like a gym membership.`] },
+    { k: "second", ok: s => s.seconds >= 3, w: s => s.seconds * .4, v: [s => `${Nw(s.seconds, "second place")}. Has never met a pot that couldn't almost be won.`] },
+    { k: "nowin", ok: s => s.wins === 0 && s.games >= 3, w: () => 3, v: [() => "Still hunting a first win. The search party has been stood down."] },
+    { k: "tinynowin", ok: s => s.wins === 0 && s.games < 3, w: () => 3, v: [s => `${s.games === 1 ? "One game, zero wins" : `${Nw(s.games, "game")}, zero wins`}: technically a 100% failure rate.`] },
+    { k: "cold", ok: s => s.games >= 4 && s.recent6 !== null && s.recent6 <= -25, w: s => -s.recent6 / 15, v: [s => `${money(s.recent6, true)} a game over the last six comp nights. The form guide reads like a coroner's report.`] },
+    { k: "worst", ok: s => s.worstNet.net <= -100, w: () => 1.6, v: [s => `Game ${s.worstNet.num}: ${money(s.worstNet.net, true)} in one night, a loss with its own commemorative plaque.`] },
+    { k: "evens", ok: s => s.evens >= 2, w: s => s.evens * 1.1, v: [s => `${Nw(s.evens, "night")} finishing exactly square. Has crossed Canberra to achieve the same financial outcome as staying home.`] },
+    { k: "small", ok: s => s.games < MIN_RANKED_GAMES, w: () => 5, v: [s => `Sample size of a cocktail sausage: ${nw(s.games, "game")}. Statistically inconclusive, personally insufferable.`] },
+    { k: "ghost", ok: s => s.daysAway > 365, w: s => s.daysAway / 150, v: [s => `Last seen game ${s.lastSeen.num}, ${s.daysAway} days ago. Still in the group chat, legally speaking.`] },
+  ];
+
+  let ROAST = null;
+  function roast() {
+    if (ROAST) return ROAST;
+    const stats = computeStats(GAMES), total = GAMES.length;
+    const hosted = {}; GAMES.forEach(g => { if (g.host) hosted[g.host] = (hosted[g.host] || 0) + 1; });
+    const topHost = Object.entries(hosted).sort((a, b) => b[1] - a[1])[0];
+    const ranked = rankByNet(qualified(stats, GAMES));
+    const age = new Map(GAMES.map((g, i) => [g.num, total - 1 - i]));
+    const today = todayISO();
+    const c = {
+      stats, total, byName: new Map(stats.map(s => [s.name, s])), fieldAvg: avg(GAMES.map(g => g.field)),
+      topHost: topHost ? topHost[0] : null, leader: ranked[0] ? ranked[0].name : null, lastDate: GAMES.at(-1).date,
+      worstNet: Math.min(...(ranked.length ? ranked : stats).map(s => s.net)),
+    };
+    stats.forEach(s => {
+      s.rv = rivals(s.name);
+      s.hostCount = hosted[s.name] || 0;
+      s.attend = s.games / total;
+      const rec = s.seq.filter(x => age.get(x.num) < 6);
+      s.recent6 = rec.length ? avg(rec.map(x => x.net)) : null; s.recent6n = rec.length;
+      s.seconds = s.places.filter(p => p === 2).length;
+      s.evens = s.seq.filter(x => x.net === 0).length;
+      s.afterWin = s.seq.slice(1).filter((x, i) => s.seq[i].place === 1).map(x => x.net);
+      s.debut = s.seq[0]; s.lastSeen = s.seq.at(-1);
+      s.daysAway = dayDiff(s.lastSeen.date, today);
+      s.avgField = avg(s.seq.map(x => x.field));
+      s.winRate = s.wins / s.games;
+    });
+    const persona = new Map(), free = new Set(stats.map(s => s.name));
+    PERSONAS.forEach(P => {
+      const cand = stats.filter(s => free.has(s.name) && P.ok(s, c)).sort((a, b) => P.rank(b, c) - P.rank(a, c));
+      if (cand.length) { persona.set(cand[0].name, P); free.delete(cand[0].name); }
+    });
+    free.forEach(n => persona.set(n, WILDCARD));
+    c.persona = persona;
+    // Pick each player's lines, most notable first, in ledger order; repeated jokes get the next wording
+    const used = {};
+    const pick = (list, s, uses, max) => list.filter(L => !uses.includes(L.k) && L.ok(s, c)).sort((a, b) => b.w(s, c) - a.w(s, c)).slice(0, max)
+      .map(L => { const i = used[L.k] = (used[L.k] === undefined ? 0 : used[L.k] + 1); return L.v[i % L.v.length](s, c); });
+    c.lines = new Map();
+    rankByNet(stats).forEach(s => { const P = persona.get(s.name); c.lines.set(s.name, { good: pick(ALLEGED, s, P.uses, 3), bad: pick(TRIBUNAL, s, P.uses, 3) }); });
+    return ROAST = c;
+  }
+  const nickFor = name => { const c = roast(), s = c.byName.get(name); return s ? c.persona.get(name).nick(s, c) : ""; };
   function openProfile(name) {
-    const stats = computeStats(GAMES), s = stats.find(x => x.name === name);
+    const c = roast(), s = c.byName.get(name);
     if (!s) return;
-    const total = GAMES.length, T = assignTitles(stats, total).get(name);
-    const fieldAvg = avg(GAMES.map(x => x.field));
-    const { nem, own } = rivals(name);
-    const pct = x => Math.round(x * 100);
-    const careers = careerGames(name, GAMES);
-    const good = [], bad = [];
-    const extra = (META[name] && META[name].notes) || { strengths: [], weaknesses: [] };
-    // A hand-written strength replaces the generic "turns up" filler
-    const hasExtra = extra.strengths.length > 0;
-    if (s.net > 0) good.push(`Actually up money: <b>${money(s.net, true)}</b> lifetime. Rare air in this comp.`);
-    if (s.games >= 3 && s.wins / s.games > 1 / fieldAvg) good.push(`Knows how to close: ${plural(s.wins, "win")} from ${s.games} games (${pct(s.wins / s.games)}%).`);
-    if (s.games < 3 && s.wins) good.push(`${pct(s.wins / s.games)}% win rate. Small sample, enormous ego.`);
-    if (s.games >= 3 && s.avgPlace < (fieldAvg + 1) / 2 - .2) good.push(`Goes deep: average finish ${s.avgPlace.toFixed(1)}.`);
-    if (s.games >= 3 && s.cashPct >= .5) good.push(`Gets the buy-in back ${pct(s.cashPct)}% of the time.`);
-    if (s.maxCash >= 3) good.push(`Can run hot: ${s.maxCash} nights in a row without losing money.`);
-    if (s.bestHaul.won >= 150) good.push(`Capable of a monster night: ${money(s.bestHaul.won)} payout in game ${s.bestHaul.num}.`);
-    if (own) good.push(`Owns ${esc(own.p)}: finished ahead ${own.a} of ${own.n} times.`);
-    if (s.games / total >= .9) good.push(`Never misses: ${s.games} of ${total} games.`);
-    if (s.rebuys === 0 && s.games >= 5) good.push("Has never needed a rebuy.");
-    if (s.games >= 3 && s.last3 > 0) good.push(`In form: ${money(s.last3, true)} a game over the last 3.`);
-    if (!good.length && !hasExtra) good.push("Turns up, keeps the pot healthy, never complains. Everyone's favourite opponent.");
-    if (s.net < 0) bad.push(`Lifetime donor: <b>${money(s.net, true)}</b>.`);
-    if (s.lasts >= 2) bad.push(`Finished dead last ${s.lasts} times. Knows the couch well.`);
-    if (s.bubbles >= 2) bad.push(`First home with nothing ${s.bubbles} times.`);
-    if (s.maxDry >= 3) bad.push(`Cold spells: ${s.maxDry} nights in a row going home down.`);
-    if (s.wins === 0) bad.push("Still hunting a first win.");
-    if (s.games >= 3 && s.cashPct < .4) bad.push(`Gets the buy-in back only ${pct(s.cashPct)}% of the time.`);
-    if (nem) bad.push(`Can't solve ${esc(nem.p)}: finished behind them ${nem.b} of ${nem.n} times.`);
-    if (s.rebuys >= 1) bad.push(`Reloads: ${plural(s.rebuys, "rebuy")} (est.).`);
-    if (s.games >= 3 && s.games / total < .5) bad.push(`Part-timer: ${s.games} of ${total} games.`);
-    if (s.games < 3) bad.push(`Sample size of a cocktail sausage: ${plural(s.games, "game")}.`);
-    if (s.games >= 3 && s.last3 < -25) bad.push(`Current form: ice cold (${money(s.last3, true)} a game over the last 3).`);
+    const P = c.persona.get(name);
+    const good = [...c.lines.get(name).good];
+    if (!good.length) good.push("Turns up, keeps the pot healthy and never complains. A pillar of the local economy.");
+    if (good.length < 2) good.push("Excellent company. Has never once been the reason anyone went home early.");
+    const bad = [...c.lines.get(name).bad];
     if (!bad.length) bad.push("Being completely insufferable about it.");
+    const notes = (META[name] && META[name].notes) || { strengths: [], weaknesses: [] };
+    const careers = careerGames(name, GAMES);
     const places = {}; s.places.forEach(p => places[p] = (places[p] || 0) + 1);
     const usual = +Object.entries(places).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
     const yrs = {}; s.seq.forEach(x => { yrs[x.season] = (yrs[x.season] || 0) + x.net; });
     const bestYear = Object.entries(yrs).sort((a, b) => b[1] - a[1])[0];
-    const ranked = rankByNet(qualified(stats, GAMES)), rank = ranked.findIndex(x => x.name === name);
+    const ranked = rankByNet(qualified(c.stats, GAMES)), rank = ranked.findIndex(x => x.name === name);
     const book = bookOdds().find(o => o.s.name === name);
-    const price = book ? `<b>${book.price}</b> to win the next game` : careers < MIN_RANKED_GAMES ? `Not priced: needs ${plural(MIN_RANKED_GAMES - careers, "more game")}` : "Not priced: hasn't played any of the last 4 games";
+    const price = book ? `<b>${book.price}</b> to win the next game (entertainment only)` : careers < MIN_RANKED_GAMES ? `Not priced: needs ${plural(MIN_RANKED_GAMES - careers, "more game")}` : "Not priced: hasn't played any of the last 4 games";
     const night = x => `Game ${x.num}, ${esc(fmtDate(x.date))}: <span class="${cls(x.net)}">${money(x.net, true)}</span> (${ord(x.place)} of ${x.field})`;
+    const { nem, own } = s.rv;
     const meta = META[name] || {};
     $("profileCard").innerHTML = `<button type="button" class="pf-close" data-close="profileModal" aria-label="Close profile">×</button>
-      <div class="pf-head">${meta.photo ? `<a class="pf-photo" href="${esc(meta.photo)}" target="_blank" rel="noopener" title="Open full photo" style="--c:${COLOURS.get(name)}"><img src="${esc(meta.photo)}" alt="${esc(name)}"></a>` : `<span class="pf-chip" style="--c:${COLOURS.get(name)}"></span>`}<div><div class="pf-title">${T.t}</div><h2 id="pfName">${esc(name)}</h2><div class="pf-tag">${T.tag}</div></div></div>
-      <div><span class="scope full">Career · all ${plural(total, "game")}</span></div>
-      <div class="pf-stats">
-        <div class="pf-stat"><span class="k">Profit</span><span class="v ${cls(s.net)}">${money(s.net, true)}</span></div>
-        <div class="pf-stat"><span class="k">Ledger</span><span class="v">${rank >= 0 ? ord(rank + 1) : "Unranked"}</span></div>
-        <div class="pf-stat"><span class="k">Wins</span><span class="v">${s.wins} / ${s.games}</span></div>
-        <div class="pf-stat"><span class="k">ROI</span><span class="v ${cls(s.roi)}">${pctTxt(s.roi, true)}</span></div>
-      </div>
+      <div class="pf-head">${meta.photo ? `<a class="pf-photo" href="${esc(meta.photo)}" target="_blank" rel="noopener" title="Open full photo" style="--c:${COLOURS.get(name)}"><img src="${esc(meta.photo)}" alt="${esc(name)}"></a>` : `<span class="pf-chip" style="--c:${COLOURS.get(name)}"></span>`}<div><div class="pf-title">${P.nick(s, c)}</div><h2 id="pfName">${esc(name)}</h2></div></div>
+      <p class="pf-intro">${P.intro(s, c)}</p>
       <div class="pf-cols">
-        <div class="pf-good"><h3>Strengths</h3><ul>${[...extra.strengths, ...good.slice(0, 3)].map(x => `<li>${x}</li>`).join("")}</ul></div>
-        <div class="pf-bad"><h3>Weaknesses</h3><ul>${[...extra.weaknesses, ...bad.slice(0, 3)].map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="pf-good"><h3>Alleged strengths</h3><ul>${good.map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="pf-bad"><h3>Matters currently before the tribunal</h3><ul>${bad.map(x => `<li>${x}</li>`).join("")}</ul></div>
       </div>
-      <dl class="pf-facts">
-        <dt>Best night</dt><dd>${night(s.bestNet)}</dd>
-        ${s.games > 1 ? `<dt>Worst night</dt><dd>${night(s.worstNet)}</dd>` : ""}
-        <dt>Biggest payout</dt><dd>${money(s.bestHaul.won)} in game ${s.bestHaul.num}</dd>
-        <dt>Usual finish</dt><dd>${ord(usual)} (${plural(places[usual], "time")})</dd>
-        <dt>Avg finish</dt><dd>${s.avgPlace.toFixed(1)}</dd>
-        ${Object.keys(yrs).length > 1 ? `<dt>Best season</dt><dd>${bestYear[0]} (<span class="${cls(bestYear[1])}">${money(bestYear[1], true)}</span>)</dd>` : ""}
-        ${nem ? `<dt>Nemesis</dt><dd>${esc(nem.p)} (behind them ${nem.b} of ${nem.n})</dd>` : ""}
-        ${own ? `<dt>Owns</dt><dd>${esc(own.p)} (ahead ${own.a} of ${own.n})</dd>` : ""}
-        <dt>The Bookie</dt><dd>${price}</dd>
-      </dl>
-      <div class="pf-quote">&ldquo;${T.quote}&rdquo;<small>Probably ${esc(name)}, at some point</small></div>
+      ${notes.strengths.length || notes.weaknesses.length ? `<div class="pf-notes"><h3>From the personal file</h3><ul>${[...notes.strengths, ...notes.weaknesses].map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
+      <div class="pf-quote"><small class="pf-would">Would absolutely say</small>&ldquo;${P.quote}&rdquo;</div>
+      <div class="pf-receipts">
+        <h3>The actual receipts <span class="scope full">Career · all ${plural(c.total, "game")}</span></h3>
+        <div class="pf-stats">
+          <div class="pf-stat"><span class="k">Profit</span><span class="v ${cls(s.net)}">${money(s.net, true)}</span></div>
+          <div class="pf-stat"><span class="k">Ledger</span><span class="v">${rank >= 0 ? ord(rank + 1) : "Unranked"}</span></div>
+          <div class="pf-stat"><span class="k">Wins</span><span class="v">${s.wins} / ${s.games}</span></div>
+          <div class="pf-stat"><span class="k">ROI</span><span class="v ${cls(s.roi)}">${pctTxt(s.roi, true)}</span></div>
+        </div>
+        <dl class="pf-facts">
+          <dt>Attendance</dt><dd>${s.games} of ${c.total} games${s.hostCount ? ` · hosted ${s.hostCount}` : ""}</dd>
+          <dt>Buy-ins / payouts</dt><dd>${money(s.buyin)} / ${money(s.won)}${s.rebuys ? ` (incl. ${plural(s.rebuys, "est. rebuy")})` : ""}</dd>
+          <dt>Results</dt><dd>${plural(s.wins, "win")}${s.sharedWins ? ` (${s.sharedWins} shared)` : ""} · ${s.profits} profitable · ${s.cashes} recovered the buy-in · ${s.payouts} any payout</dd>
+          <dt>Finishes</dt><dd>Usually ${ord(usual)} (${plural(places[usual], "time")}) · average ${s.avgPlace.toFixed(1)} · ${s.lasts} dead last · ${s.bubbles} first out with nothing</dd>
+          <dt>Best night</dt><dd>${night(s.bestNet)}</dd>
+          ${s.games > 1 ? `<dt>Worst night</dt><dd>${night(s.worstNet)}</dd>` : ""}
+          <dt>Biggest payout</dt><dd>${money(s.bestHaul.won)} in game ${s.bestHaul.num}</dd>
+          ${Object.keys(yrs).length > 1 ? `<dt>Best season</dt><dd>${bestYear[0]} (<span class="${cls(bestYear[1])}">${money(bestYear[1], true)}</span>)</dd>` : ""}
+          ${nem ? `<dt>Nemesis</dt><dd>${esc(nem.p)} (behind them ${nem.b} of ${nem.n})</dd>` : ""}
+          ${own ? `<dt>Owns</dt><dd>${esc(own.p)} (ahead ${own.a} of ${own.n})</dd>` : ""}
+          <dt>The Bookie</dt><dd>${price}</dd>
+        </dl>
+      </div>
+      <p class="small">The roast is written by the dashboard from the results above, so it changes as the results do. All quotes are made up.</p>
       <div class="actions"><button type="button" class="mbtn primary" data-labgo="${esc(name)}">Analyse in the Player Lab</button></div>`;
     if ($("profileModal").hidden && $("gameModal").hidden) modalReturn = document.activeElement;
     $("gameModal").hidden = true;
