@@ -1,7 +1,14 @@
 {
   "Simon": {
     "strengths": [
-      "Lost 50 kg over the life of the comp. Proof you <i>can</i> force some things."
+      "Lost 50 kg over the life of the comp. Proof you <i>can</i> force some things.",
+      "Spends most nights at the table in a Vietnamese accent, purely to get under Pete's skin. Success rate: considerably higher than any win rate in this league."
+    ]
+  },
+  "Pete": {
+    "voice": "sweary",
+    "weaknesses": [
+      "Has been fuckin' wound up by Simon's accent bit every single night and has never once worked out that reacting is the whole point."
     ]
   }
 }

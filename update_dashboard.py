@@ -133,6 +133,8 @@ def main():
                 print(f"Note: player_notes.json mentions '{raw}', who isn't in the results")
                 continue
             players.setdefault(name, {})["notes"] = {k: [str(x) for x in v] for k, v in notes.items() if k in ("strengths", "weaknesses")}
+            if notes.get("voice") == "sweary":
+                players[name]["voice"] = "sweary"   # their profile roast gets sworn up
     data = json.dumps({"settings": settings, "games": games, "players": players}, separators=(",", ":"))
     html = html[: m.start(1)] + data + html[m.end(1):]
     HTML.write_text(html, encoding="utf-8")
