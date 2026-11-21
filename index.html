@@ -1493,6 +1493,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
   const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
   const word = n => n >= 0 && n < WORDS.length ? WORDS[n] : String(n);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const andList = a => a.length < 2 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a.at(-1)}`;
 
   // Nemesis: the player they finish behind most (net). Owns: the one they finish ahead of most. Min 3 shared games.
   function rivals(name) {
@@ -1539,7 +1540,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       quote: "I'm not losing. I'm investing in the culture." },
     { key: "switch", uses: ["lasts", "wins", "switch"], ok: s => s.games >= 6 && s.wins >= 2 && s.lasts >= 3 && (s.wins + s.lasts) / s.games >= .7, rank: s => (s.wins + s.lasts) / s.games,
       nick: () => "The Human Light Switch",
-      intro: s => { return `Has exactly two settings: champion and couch. ${Nw(s.wins + s.lasts, "night")} out of ${s.games} have finished either first or dead last, and the middle of the table is treated like a rumour${s.midGames.length ? ` (the only exceptions: ${s.midGames.length === 1 ? "game" : "games"} ${s.midGames.join(" and ")})` : ""}. ${Nw(s.wins, "win")}, ${nw(s.lasts, "last place")}, and nobody in the room, ${esc(s.name)} included, has the faintest idea which one is coming.`; },
+      intro: s => { return `Has exactly two settings: champion and couch. ${Nw(s.wins + s.lasts, "night")} out of ${s.games} have finished either first or dead last, and the middle of the table is treated like a rumour${s.midGames.length ? ` (the only exceptions: ${s.midGames.length === 1 ? "game" : "games"} ${andList(s.midGames)})` : ""}. ${Nw(s.wins, "win")}, ${nw(s.lasts, "last place")}, and nobody in the room, ${esc(s.name)} included, has the faintest idea which one is coming.`; },
       quote: "I play to win, mate. Or to be home by ten. Either's fine." },
     { key: "spoon", uses: ["lasts", "bubble"], ok: s => s.lasts >= 3, rank: s => s.lasts / s.games,
       nick: s => s.bubbles >= 3 ? "The Bubble's Emergency Contact" : "Head of Early Departures",
