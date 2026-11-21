@@ -1617,6 +1617,10 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     { k: "norebuy", ok: s => s.rebuys === 0 && s.games >= 8, w: () => 1, v: [() => "Has never once reloaded. Discipline, or a deep suspicion of the bank."] },
     { k: "crowd", ok: s => { const b = s.seq.filter(x => x.field >= 5), m = s.seq.filter(x => x.field <= 4); return b.length >= 2 && m.length >= 2 && avg(b.map(x => x.net)) - avg(m.map(x => x.net)) >= 20; }, w: s => (avg(s.seq.filter(x => x.field >= 5).map(x => x.net)) - avg(s.seq.filter(x => x.field <= 4).map(x => x.net))) / 15, v: [
       s => { const b = s.seq.filter(x => x.field >= 5), m = s.seq.filter(x => x.field <= 4); return `Falls apart at a cosy table (${money(avg(m.map(x => x.net)), true)} a game with four or fewer) but goes ${money(avg(b.map(x => x.net)), true)} a game once five or more turn up. Needs an audience.`; }] },
+    { k: "lastwin", ok: (s, c) => s.lastSeen.num === c.latest.num && s.lastSeen.place === 1, w: () => 4.5, v: [
+      (s, c) => `Won game ${c.latest.num}, the latest one${c.latest.host === s.name ? ", on home turf" : c.latest.host ? ` (at ${esc(possessive(c.latest.host))})` : ""}, for ${money(s.lastSeen.net, true)}. Hasn't shut up since and has no plans to start.`] },
+    { k: "seasonlead", ok: (s, c) => c.seasonLeader === s.name && s.seasonNet > 0, w: () => 4, v: [
+      (s, c) => `Leads the ${c.season} season on ${money(s.seasonNet, true)}. Has started referring to it as "the reign".`] },
     { k: "chopwin", ok: s => s.sharedWins > 0 && s.wins > s.sharedWins, w: () => .8, v: [s => `Counts ${s.sharedWins === 1 ? "a chopped pot" : word(s.sharedWins) + " chopped pots"} as a full win and will not be taking questions.`] },
   ];
   // "Matters currently before the tribunal"
@@ -1634,9 +1638,9 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       s => `First to go home with nothing ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). The bubble has the number saved.`,
       s => `${Nw(s.bubbles, "time")} the first one out with nothing (games ${gl(s.bubbleGames)}). Knows exactly where the money stops, and stops there.`,
       s => `Busted first out of the money ${nw(s.bubbles, "time")} (games ${gl(s.bubbleGames)}). On first-name terms with the bubble.`] },
-    { k: "dry", ok: s => s.maxDry >= 3, w: s => s.maxDry * .7, v: [
-      s => `${Nw(s.maxDry, "straight night")} going home down (${fmtRuns(s.dryRuns.runs)}). Refers to this period as "rebuilding".`,
-      s => `${Nw(s.maxDry, "losing night")} in a row (${fmtRuns(s.dryRuns.runs)}). The good times were "just around the corner" for the entire stretch.`] },
+    { k: "dry", ok: s => s.maxDry >= 3, w: (s, c) => s.maxDry * .7 * (s.dryAge > 6 ? .45 : 1), v: [
+      s => `${Nw(s.maxDry, "straight night")} going home down (${fmtRuns(s.dryRuns.runs)}${s.dryAge > 6 ? `, back in ${s.dryEndYear}` : ""}). Refers to this period as "rebuilding".`,
+      s => `${Nw(s.maxDry, "losing night")} in a row (${fmtRuns(s.dryRuns.runs)}${s.dryAge > 6 ? `, back in ${s.dryEndYear}` : ""}). The good times were "just around the corner" for the entire stretch.`] },
     { k: "rebuy", ok: s => s.rebuys >= 1, w: s => s.rebuys * 1.3, v: [
       s => `${Nw(s.rebuys, "estimated rebuy")}. Has mistaken the buy-in for a subscription service.`,
       s => `${Nw(s.rebuys, "estimated rebuy")}. Treats the buy-in as an opening offer.`] },
@@ -1648,6 +1652,8 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     { k: "swing", ok: s => s.seq.length >= 2 && s.swingMax.d >= 150, w: s => s.swingMax.d / 80, v: [
       s => `Went ${money(s.swingMax.x.net, true)} in game ${s.swingMax.x.num} then ${money(s.swingMax.y.net, true)} in game ${s.swingMax.y.num}: a ${money(s.swingMax.d)} swing with no warning and no explanation.`,
       s => `${money(s.swingMax.x.net, true)} in game ${s.swingMax.x.num}, ${money(s.swingMax.y.net, true)} in game ${s.swingMax.y.num}. Bankroll management by Bunnings sausage-sizzle rules.`] },
+    { k: "lastlast", ok: (s, c) => s.lastSeen.num === c.latest.num && s.lastSeen.soleLast, w: () => 3.8, v: [
+      (s, c) => `Finished dead last in game ${c.latest.num}, the most recent game, ${ord(s.lastSeen.place)} of ${s.lastSeen.field}. Still processing.`] },
     { k: "hangover", ok: s => s.afterWin.length >= 2 && avg(s.afterWin) < 0, w: s => -avg(s.afterWin) / 20, v: [s => `Averages ${money(avg(s.afterWin), true)} the night after a win. Celebrates like the trophy is permanent. It is not.`] },
     { k: "parttime", ok: (s, c) => s.games >= 3 && s.attend < .65, w: s => (1 - s.attend) * 3, v: [(s, c) => `Has played ${s.games} of ${c.total} games. Treats the league like a gym membership.`] },
     { k: "second", ok: s => s.seconds >= 3, w: s => s.seconds * .4, v: [s => `${Nw(s.seconds, "second place")}. Has never met a pot that couldn't almost be won.`] },
@@ -1698,7 +1704,13 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       stats, total, byName: new Map(stats.map(s => [s.name, s])), fieldAvg: avg(GAMES.map(g => g.field)),
       topHost: topHost ? topHost[0] : null, leader: ranked[0] ? ranked[0].name : null, lastDate: GAMES.at(-1).date,
       worstNet: Math.min(...(ranked.length ? ranked : stats).map(s => s.net)),
+      latest: GAMES.at(-1), season: GAMES.at(-1).season,
     };
+    const seasonGames = GAMES.filter(g => g.season === c.season);
+    const seasonStats = computeStats(seasonGames);
+    const seasonRanked = rankByNet(qualified(seasonStats, seasonGames));
+    c.seasonLeader = seasonRanked[0] ? seasonRanked[0].name : null;
+    const seasonNet = new Map(seasonStats.map(x => [x.name, x.net]));
     stats.forEach(s => {
       s.rv = rivals(s.name);
       s.hostCount = hosted[s.name] || 0;
@@ -1713,6 +1725,11 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       s.avgField = avg(s.seq.map(x => x.field));
       s.winRate = s.wins / s.games;
       s.midGames = s.seq.filter(x => x.place !== 1 && !x.soleLast).map(x => x.num);
+      s.seasonNet = seasonNet.get(s.name) || 0;
+      // How many comp games ago the longest losing run ended (most recent run if tied)
+      const lastRun = s.dryRuns.runs.at(-1);
+      s.dryAge = lastRun ? age.get(lastRun.at(-1)) : 0;
+      s.dryEndYear = lastRun ? (BY_NUM.get(lastRun.at(-1)) || {}).season : "";
       s.swingMax = { d: 0 };
       for (let i = 1; i < s.seq.length; i++) { const d = Math.abs(s.seq[i].net - s.seq[i - 1].net); if (d > s.swingMax.d) s.swingMax = { d, x: s.seq[i - 1], y: s.seq[i] }; }
     });
@@ -1740,8 +1757,12 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
     if (!s) return;
     const P = c.persona.get(name), sweary = isSweary(name);
     const good = [...c.lines.get(name).good];
-    if (!good.length) good.push("Turns up, keeps the pot healthy and never complains. A pillar of the local economy.");
-    if (good.length < 2) good.push("Excellent company. Has never once been the reason anyone went home early.");
+    // Fallbacks still come from the record, never from thin air
+    const fallbacks = [
+      ...(P.uses.includes("loss") ? [] : [s.net < 0 ? `Has put ${money(-s.net)} into the pot for other people to win. Genuinely generous.` : `Turns up and pays in: ${money(s.buyin)} in buy-ins so far. A pillar of the local economy.`]),
+      `Best night: ${money(s.bestNet.net, true)} in game ${s.bestNet.num}, ${ord(s.bestNet.place)} of ${s.bestNet.field}. Peak performance, apparently.`,
+    ];
+    while (good.length < 2 && fallbacks.length) good.push(fallbacks.shift());
     const bad = [...c.lines.get(name).bad];
     if (!bad.length) bad.push("Being completely insufferable about it.");
     const notes = (META[name] && META[name].notes) || { strengths: [], weaknesses: [] };
