@@ -1518,12 +1518,14 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
 
   // One persona per player, chosen in this order: each goes to the best-matching player not yet given one.
   const PERSONAS = [
-    { key: "rookie", uses: ["rookie"], ok: s => s.games < MIN_RANKED_GAMES && s.wins >= 1, rank: s => s.winRate,
-      nick: () => "Patron Saint of Small Samples",
-      intro: s => `${s.games === 1 ? "One appearance. One win." : `${Nw(s.games, "appearance")}, ${nw(s.wins, "win")}.`} Already discussing the documentary. ${money(s.net, true)} and a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue until the sun burns out.`,
+    { key: "rookie", uses: ["rookie", "swing"], ok: s => s.games < MIN_RANKED_GAMES && s.wins >= 1, rank: s => s.winRate,
+      nick: s => s.games === 2 && s.debut.place === 1 && s.lastSeen.place !== 1 ? "One-Hit Wonder, Difficult Second Album" : "Patron Saint of Small Samples",
+      intro: s => s.games === 2 && s.debut.place === 1 && s.lastSeen.place !== 1
+        ? `Won game ${s.debut.num} on debut and started discussing the documentary. Then game ${s.lastSeen.num}: ${ord(s.lastSeen.place)} of ${s.lastSeen.field}, ${money(s.lastSeen.net, true)}. The documentary has been re-cut as a two-part miniseries, still ${money(s.net, true)} overall with a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue regardless.`
+        : `${s.games === 1 ? "One appearance. One win." : `${Nw(s.games, "appearance")}, ${nw(s.wins, "win")}.`} Already discussing the documentary. ${money(s.net, true)} and a ${Math.round(s.winRate * 100)}% win rate that will be quoted at every barbecue until the sun burns out.`,
       quote: "Honestly don't know what you blokes find so hard." },
     { key: "ghost", uses: ["ghost"], ok: s => s.games < MIN_RANKED_GAMES && s.daysAway > 365, rank: s => s.daysAway,
-      nick: () => "The League's Most Successful Missing Person",
+      nick: s => s.net > 0 ? "Missing, Presumed Profitable" : "Missing, Presumed Skint",
       intro: s => `${s.games === 1 ? `Played game ${s.debut.num}, finished ${ord(s.debut.place)}, banked ${money(s.net, true)}` : `Played ${nw(s.games, "game")} for ${money(s.net, true)}`} and has not been sighted in ${s.daysAway} days. The only member of the league with a flawless exit strategy.`,
       quote: "I'm still technically in the league." },
     { key: "tourist", uses: ["small"], ok: s => s.games < MIN_RANKED_GAMES, rank: s => -s.games,
@@ -1531,13 +1533,17 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       intro: s => `${Nw(s.games, "game")}, ${money(s.net, true)}. Has seen enough to form strong opinions and nowhere near enough to be held to them.`,
       quote: "I'll come more when it's on a better night." },
     { key: "landlord", uses: ["profit", "host"], ok: (s, c) => s.name === c.leader && s.net > 0, rank: s => s.net,
-      nick: (s, c) => c.topHost === s.name ? "His Excellency the Landlord (and Venue)" : "His Excellency the Landlord",
-      intro: (s, c) => { const yrs = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${cap(word(yrs))} year${yrs === 1 ? "" : "s"} of psychological warfare, ${nw(s.wins, "victory", "victories")} and an increasingly sophisticated analytics department. Financially: ${money(s.net, true)}, ${s.net < 600 ? "a decent weekend on Marketplace" : "roughly one second-hand jet ski"}.${c.topHost === s.name ? ` Also owns the venue, having hosted ${s.hostCount} of ${c.total} games, so the house edge is literal.` : ""}`; },
+      nick: (s, c) => c.topHost === s.name ? "The House (Literally)" : "His Excellency the Landlord",
+      intro: (s, c) => { const yrs = Math.max(1, Math.floor(dayDiff(s.debut.date, c.lastDate) / 365)); return `${cap(word(yrs))} year${yrs === 1 ? "" : "s"} of psychological warfare, ${nw(s.wins, "victory", "victories")} and an increasingly sophisticated analytics department. Financially: ${money(s.net, true)}, ${s.net < 600 ? "a decent weekend on Marketplace" : "roughly one second-hand jet ski"}.${c.topHost === s.name ? ` Also supplies the venue (${s.hostCount} of ${c.total} games), the table and most of the gloating.` : ""}`; },
       quote: "If you lot played properly I wouldn't have to keep taking your money." },
     { key: "benefactor", uses: ["loss"], ok: (s, c) => s.net < 0 && s.net === c.worstNet, rank: s => -s.net,
-      nick: () => "The Minister for Unscheduled Donations",
+      nick: () => "The League's Sovereign Wealth Fund",
       intro: s => `An essential pillar of the league's funding model: ${money(-s.net)} contributed since ${s.debut.season}. Technically eligible to claim everyone else as dependants. ${s.wins === 0 ? "Zero wins, which at least keeps the paperwork simple." : s.wins === s.sharedWins ? `${Nw(s.wins, "win")}, and ${s.wins === 1 ? "even that was a chop" : "every one of them chopped"}.` : `${Nw(s.wins, "win")}, purely to keep everyone's hopes up.`}`,
       quote: "I'm not losing. I'm investing in the culture." },
+    { key: "surge", uses: ["seasonlead"], ok: (s, c) => c.seasonLeader === s.name && s.name !== c.leader && s.seasonNet > 0 && s.net - s.seasonNet < 0, rank: s => s.seasonNet,
+      nick: () => "The Second Coming",
+      intro: (s, c) => { const before = s.net - s.seasonNet, sw = s.seq.filter(x => x.season === c.season && x.place === 1).length; return `Went into ${c.season} ${money(before, true)} lifetime and looking like a cautionary tale. Then came ${money(s.seasonNet, true)}, ${nw(sw, "win")} and the ${c.season} season lead. Arrived late, taking the credit early.`; },
+      quote: "I've always been this good. You lot just weren't paying attention." },
     { key: "switch", uses: ["lasts", "wins", "switch"], ok: s => s.games >= 6 && s.wins >= 2 && s.lasts >= 3 && (s.wins + s.lasts) / s.games >= .7, rank: s => (s.wins + s.lasts) / s.games,
       nick: () => "The Human Light Switch",
       intro: s => { return `Has exactly two settings: champion and couch. ${Nw(s.wins + s.lasts, "night")} out of ${s.games} have finished either first or dead last, and the middle of the table is treated like a rumour${s.midGames.length ? ` (the only exceptions: ${s.midGames.length === 1 ? "game" : "games"} ${andList(s.midGames)})` : ""}. ${Nw(s.wins, "win")}, ${nw(s.lasts, "last place")}, and nobody in the room, ${esc(s.name)} included, has the faintest idea which one is coming.`; },
@@ -1547,15 +1553,15 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
       intro: s => `Doesn't play tight or loose. Plays briefly. ${cap(word(s.lasts))} dead-last finishes from ${s.games} games${s.bubbles >= 2 ? ` and ${word(s.bubbles)} more nights as first home with nothing` : ""}: a league record for being home before the dishes are done.${s.wins ? ` Has also somehow won ${word(s.wins)}, which the maths department is still investigating.` : ""}`,
       quote: "I was card dead. For about four years." },
     { key: "second", uses: ["second"], ok: s => s.seconds >= 4 && s.seconds >= s.wins, rank: s => s.seconds,
-      nick: () => "The Deputy Principal of Second Place",
+      nick: () => "Australia's Most Decorated Runner-Up",
       intro: s => `Has spent so long in second place that mail now arrives there: ${word(s.seconds)} runner-up finishes from ${s.games}. ${s.net > 0 ? `Still ${money(s.net, true)} overall, the most second-place achievement imaginable.` : `Somehow still ${money(s.net, true)} overall, which takes real commitment.`}`,
       quote: "Second's basically first if you think about it. I've thought about it a lot.",
       introSweary: s => `Has spent so long in second place that the fuckin' mail goes there now: ${word(s.seconds)} runner-up finishes from ${s.games}. ${s.net > 0 ? `Still ${money(s.net, true)} overall, the most second-place achievement imaginable, and will tell you all about it at full volume with every adjective available.` : `Somehow still ${money(s.net, true)} overall, which takes real fuckin' commitment.`}`,
       quoteSweary: "Second's basically fuckin' first, mate. Fuck off. I've done the maths." },
     { key: "apprentice", uses: ["small", "bigtable"], ok: s => s.games <= 4, rank: s => -s.games,
-      nick: () => "The Work-Experience Kid With Tenure Ambitions",
+      nick: s => s.seq.every(x => x.field >= 5) && s.wins === 0 ? "Strictly Stadium Shows (No Encores)" : "The Work-Experience Kid With Tenure Ambitions",
       intro: s => `Statistically inconclusive. Personally insufferable. ${Nw(s.games, "game")}${s.seq.every(x => x.field >= 5) ? `, every one of them at a table of ${s.seq.every(x => x.field === s.seq[0].field) ? word(s.seq[0].field) : "five or more"}, because some people only perform in front of a crowd` : ""}.`,
-      quote: "Three games is plenty to know I'm the best here." },
+      quote: s => `${Nw(s.games, "game")} is plenty to know I'm the best here.`.replace(/^(\w+) games is/, "$1 games is") },
     { key: "messiah", uses: ["parttime"], ok: s => s.attend < .75 && s.wins >= 1, rank: s => s.winRate,
       nick: () => "The Part-Time Poker Messiah",
       intro: (s, c) => `Appears in ${s.games} of ${c.total} games, delivers ${word(s.wins)} miracle${s.wins === 1 ? "" : "s"}, then vanishes to let the disciples argue about it.${s.recent6 !== null && s.recent6 > 0 ? ` Lately running at ${money(s.recent6, true)} a game, and the faithful are getting ideas.` : ""}`,
@@ -1785,7 +1791,7 @@ footer { color: var(--on-felt-soft); font-size: 13px; text-align: center; }
         <div class="pf-bad"><h3>Matters currently before the tribunal</h3><ul>${bad.map(x => `<li>${x}</li>`).join("")}</ul></div>
       </div>
       ${notes.strengths.length || notes.weaknesses.length ? `<div class="pf-notes"><h3>From the personal file</h3><ul>${[...notes.strengths, ...notes.weaknesses].map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
-      <div class="pf-quote"><small class="pf-would">Would absolutely say</small>&ldquo;${sweary && P.quoteSweary ? P.quoteSweary : P.quote}&rdquo;</div>
+      <div class="pf-quote"><small class="pf-would">Would absolutely say</small>&ldquo;${sweary && P.quoteSweary ? P.quoteSweary : typeof P.quote === "function" ? P.quote(s, c) : P.quote}&rdquo;</div>
       <div class="pf-receipts">
         <h3>The actual receipts <span class="scope full">Career · all ${plural(c.total, "game")}</span></h3>
         <div class="pf-stats">
